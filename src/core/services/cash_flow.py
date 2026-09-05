@@ -16,15 +16,6 @@ class MonthlyCashFlow:
     net: Decimal
     transaction_count: int
 
-    def to_row(self) -> dict[str, str | int]:
-        return {
-            "month": self.month.isoformat(),
-            "inflow": format(self.inflow, "f"),
-            "outflow": format(self.outflow, "f"),
-            "net": format(self.net, "f"),
-            "transaction_count": self.transaction_count,
-        }
-
 
 def calculate_monthly_cash_flow(
     transactions: Iterable[Transaction],
