@@ -5,7 +5,7 @@ from decimal import Decimal
 from typing import Protocol
 
 from ..models.position import Position
-from ..models.transaction import Transaction, TransactionDirection
+from ..models.transaction import Transaction
 
 
 @dataclass(slots=True)
@@ -54,18 +54,6 @@ class SaleHandler:
         quantity = quantity_of(transaction)
         position.current_quantity -= quantity
         position.total_sold_quantity += quantity
-
-
-class SettlementTransferHandler:
-    def __init__(self) -> None:
-        self.purchase_handler = PurchaseHandler()
-        self.sale_handler = SaleHandler()
-
-    def apply(self, position: PositionAccumulator, transaction: Transaction) -> None:
-        if transaction.direction is TransactionDirection.CREDIT:
-            self.purchase_handler.apply(position, transaction)
-        else:
-            self.sale_handler.apply(position, transaction)
 
 
 class CustodyTransferHandler:
