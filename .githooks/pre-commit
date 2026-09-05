@@ -4,13 +4,25 @@ set -eu
 
 repo_root=$(git rev-parse --show-toplevel)
 jupyter="$repo_root/.venv/bin/jupyter"
+nbconvert="$repo_root/.venv/bin/jupyter-nbconvert"
+
+if [ -x "$nbconvert" ]; then
+    nbconvert_mode=direct
+elif [ -x "$jupyter" ] && "$jupyter" nbconvert --version >/dev/null 2>&1; then
+    nbconvert_mode=subcommand
+else
+    echo "pre-commit: nbconvert is not available in $repo_root/.venv" >&2
+    echo "Install it with: $repo_root/.venv/bin/python -m pip install nbconvert" >&2
+    exit 1
+fi
 
 git diff --cached --name-only --diff-filter=ACMR -- '*.ipynb' |
 while IFS= read -r notebook; do
     [ -n "$notebook" ] || continue
-    "$jupyter" nbconvert \
-        --to notebook \
-        --clear-output \
-        --inplace "$repo_root/$notebook"
+    if [ "$nbconvert_mode" = direct ]; then
+        "$nbconvert" --to notebook --clear-output --inplace "$repo_root/$notebook"
+    else
+        "$jupyter" nbconvert --to notebook --clear-output --inplace "$repo_root/$notebook"
+    fi
     git add -- "$notebook"
 done
