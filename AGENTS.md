@@ -29,7 +29,7 @@ Write Python with 4-space indentation, type annotations, and `from __future__ im
 
 ## Testing Guidelines
 
-No test framework or coverage threshold is configured yet. When adding tests, place them under `tests/`, name files `test_*.py`, and cover parsing, validation, cash-flow classification, and month-boundary behavior. At minimum, run compilation and the relevant ingestion command before submitting changes.
+No test framework or coverage threshold is configured yet. Keep tests close to the implementation they cover, colocated in the relevant `src/` package, and name files `*_test.py` (for example, `src/core/services/build_position_test.py`). Cover parsing, validation, cash-flow classification, and month-boundary behavior. At minimum, run compilation and the relevant ingestion command before submitting changes.
 
 ## Commit & Pull Request Guidelines
 

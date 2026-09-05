@@ -14,43 +14,56 @@ def parse_position_decimal(value: str) -> Decimal:
 
 @dataclass(frozen=True, slots=True)
 class Position:
-    """The current holding for an asset within an account."""
+    """The consolidated holding for an asset across all accounts."""
 
     asset_id: str
-    account_id: str
-    quantity: Decimal
+    current_quantity: Decimal
+    total_acquired_quantity: Decimal
+    total_sold_quantity: Decimal
     invested_capital: Decimal
 
     @property
-    def key(self) -> tuple[str, str]:
-        return self.asset_id, self.account_id
-
-    @property
-    def total_invested_capital(self) -> Decimal:
-        return self.invested_capital
+    def key(self) -> str:
+        return self.asset_id
 
     @classmethod
     def from_store_row(cls, row: Mapping[str, str]) -> Position:
         try:
             asset_id = row["asset_id"].strip()
-            account_id = row["account_id"].strip()
-            quantity = parse_position_decimal(row["quantity"])
+            current_quantity = parse_position_decimal(row["current_quantity"])
+            total_acquired_quantity = parse_position_decimal(
+                row["total_acquired_quantity"]
+            )
+            total_sold_quantity = parse_position_decimal(row["total_sold_quantity"])
             invested_capital = parse_position_decimal(row["invested_capital"])
         except KeyError as exc:
             raise ValueError(f"Missing stored position field: {exc.args[0]}") from exc
 
-        if not asset_id or not account_id:
-            raise ValueError("Stored position must have asset_id and account_id")
+        if not asset_id:
+            raise ValueError("Stored position has an empty asset_id")
 
-        return cls(asset_id, account_id, quantity, invested_capital)
+        return cls(
+            asset_id,
+            current_quantity,
+            total_acquired_quantity,
+            total_sold_quantity,
+            invested_capital,
+        )
 
     def to_store_row(self) -> dict[str, str]:
         return {
             "asset_id": self.asset_id,
-            "account_id": self.account_id,
-            "quantity": format(self.quantity, "f"),
+            "current_quantity": format(self.current_quantity, "f"),
+            "total_acquired_quantity": format(self.total_acquired_quantity, "f"),
+            "total_sold_quantity": format(self.total_sold_quantity, "f"),
             "invested_capital": format(self.invested_capital, "f"),
         }
 
 
-POSITION_COLUMNS = ["asset_id", "account_id", "quantity", "invested_capital"]
+POSITION_COLUMNS = [
+    "asset_id",
+    "current_quantity",
+    "total_acquired_quantity",
+    "total_sold_quantity",
+    "invested_capital",
+]

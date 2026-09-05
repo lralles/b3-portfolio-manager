@@ -25,4 +25,3 @@ class PositionRepository:
             writer = csv.DictWriter(fh, fieldnames=POSITION_COLUMNS)
             writer.writeheader()
             writer.writerows(position.to_store_row() for position in positions)
-
