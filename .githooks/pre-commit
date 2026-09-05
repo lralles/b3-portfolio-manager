@@ -1,0 +1,16 @@
+#!/bin/sh
+
+set -eu
+
+repo_root=$(git rev-parse --show-toplevel)
+jupyter="$repo_root/.venv/bin/jupyter"
+
+git diff --cached --name-only --diff-filter=ACMR -- '*.ipynb' |
+while IFS= read -r notebook; do
+    [ -n "$notebook" ] || continue
+    "$jupyter" nbconvert \
+        --to notebook \
+        --clear-output \
+        --inplace "$repo_root/$notebook"
+    git add -- "$notebook"
+done
