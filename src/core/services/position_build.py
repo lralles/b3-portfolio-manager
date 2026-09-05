@@ -13,14 +13,12 @@ from .position_handlers import (
     PositionTransactionHandler,
     PurchaseHandler,
     SaleHandler,
-    SettlementTransferHandler,
 )
 
 
 POSITION_HANDLERS: dict[TransactionOperationType, PositionTransactionHandler] = {
     TransactionOperationType.PURCHASE: PurchaseHandler(),
     TransactionOperationType.SALE: SaleHandler(),
-    TransactionOperationType.SETTLEMENT_TRANSFER: SettlementTransferHandler(),
     TransactionOperationType.TRANSFER: CustodyTransferHandler(),
     TransactionOperationType.DIVIDEND: IgnoredTransactionHandler(),
     TransactionOperationType.INTEREST_ON_EQUITY: IgnoredTransactionHandler(),

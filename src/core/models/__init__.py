@@ -1,7 +1,7 @@
 from .account import Account
 from .asset import Asset
 from .position import Position
-from .transaction import IOFlow, Transaction, TransactionDirection, TransactionOperationType
+from .transaction import IOFlow, Transaction, TransactionOperationType
 
 __all__ = [
     "Account",
@@ -9,6 +9,5 @@ __all__ = [
     "IOFlow",
     "Position",
     "Transaction",
-    "TransactionDirection",
     "TransactionOperationType",
 ]

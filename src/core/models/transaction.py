@@ -7,11 +7,6 @@ from enum import StrEnum
 from typing import Mapping
 
 
-class TransactionDirection(StrEnum):
-    CREDIT = "credit"
-    DEBIT = "debit"
-
-
 class IOFlow(StrEnum):
     INFLOW = "inflow"
     OUTFLOW = "outflow"
@@ -23,13 +18,12 @@ class TransactionOperationType(StrEnum):
     INTEREST_ON_EQUITY = "interest_on_equity"
     INCOME = "income"
     TRANSFER = "transfer"
-    SETTLEMENT_TRANSFER = "settlement_transfer"
     SALE = "sale"
 
 
-SOURCE_DIRECTION_MAP = {
-    "credito": TransactionDirection.CREDIT,
-    "debito": TransactionDirection.DEBIT,
+SOURCE_IO_FLOW_MAP = {
+    "credito": IOFlow.INFLOW,
+    "debito": IOFlow.OUTFLOW,
 }
 
 SOURCE_OPERATION_TYPE_MAP = {
@@ -38,9 +32,10 @@ SOURCE_OPERATION_TYPE_MAP = {
     "juros sobre capital próprio": TransactionOperationType.INTEREST_ON_EQUITY,
     "rendimento": TransactionOperationType.INCOME,
     "transferência": TransactionOperationType.TRANSFER,
-    "transferência - liquidação": TransactionOperationType.SETTLEMENT_TRANSFER,
     "venda": TransactionOperationType.SALE,
 }
+
+SOURCE_SETTLEMENT_TRANSFER = "transferência - liquidação"
 
 OPERATION_TYPES_WITH_OUTFLOW = {
     TransactionOperationType.DIVIDEND,
@@ -60,7 +55,7 @@ def parse_decimal(value: str) -> Decimal | None:
 
 @dataclass(frozen=True, slots=True)
 class Transaction:
-    direction: TransactionDirection
+    io_flow: IOFlow
     date: date
     operation_type: TransactionOperationType
     asset_id: str
@@ -69,16 +64,10 @@ class Transaction:
     unit_price: Decimal | None
     operation_value: Decimal | None
 
-    @property
-    def io_flow(self) -> IOFlow:
-        if self.operation_type in OPERATION_TYPES_WITH_OUTFLOW:
-            return IOFlow.OUTFLOW
-        return IOFlow.INFLOW if self.direction is TransactionDirection.CREDIT else IOFlow.OUTFLOW
-
     @classmethod
     def from_store_row(cls, row: Mapping[str, str]) -> Transaction:
         try:
-            direction = TransactionDirection(row["direction"])
+            io_flow = IOFlow(row["io_flow"])
             operation_type = TransactionOperationType(row["operation_type"])
             transaction_date = date.fromisoformat(row["date"])
             asset_id = row["asset_id"].strip()
@@ -88,7 +77,7 @@ class Transaction:
         except ValueError as exc:
             raise ValueError(
                 f"Invalid stored transaction enum or date: "
-                f"{row.get('direction')!r}, {row.get('operation_type')!r}, "
+                f"{row.get('io_flow')!r}, {row.get('operation_type')!r}, "
                 f"{row.get('date')!r}"
             ) from exc
 
@@ -98,7 +87,7 @@ class Transaction:
             raise ValueError("Stored transaction has an empty account_id")
 
         return cls(
-            direction=direction,
+            io_flow=io_flow,
             date=transaction_date,
             operation_type=operation_type,
             asset_id=asset_id,
@@ -120,14 +109,26 @@ class Transaction:
             raise ValueError(f"Missing sanitized transaction field: {exc.args[0]}") from exc
 
         try:
-            direction = SOURCE_DIRECTION_MAP[direction_value]
+            io_flow = SOURCE_IO_FLOW_MAP[direction_value]
         except KeyError as exc:
             raise ValueError(f"Unknown transaction direction: {direction_value!r}") from exc
 
-        try:
-            operation_type = SOURCE_OPERATION_TYPE_MAP[operation_value]
-        except KeyError as exc:
-            raise ValueError(f"Unknown transaction operation type: {operation_value!r}") from exc
+        if operation_value == SOURCE_SETTLEMENT_TRANSFER:
+            operation_type = (
+                TransactionOperationType.PURCHASE
+                if io_flow is IOFlow.INFLOW
+                else TransactionOperationType.SALE
+            )
+        else:
+            try:
+                operation_type = SOURCE_OPERATION_TYPE_MAP[operation_value]
+            except KeyError as exc:
+                raise ValueError(
+                    f"Unknown transaction operation type: {operation_value!r}"
+                ) from exc
+
+        if operation_type in OPERATION_TYPES_WITH_OUTFLOW:
+            io_flow = IOFlow.OUTFLOW
 
         try:
             transaction_date = date.fromisoformat(date_value)
@@ -137,7 +138,7 @@ class Transaction:
             ) from exc
 
         return cls(
-            direction=direction,
+            io_flow=io_flow,
             date=transaction_date,
             operation_type=operation_type,
             asset_id=asset_id,
@@ -149,7 +150,7 @@ class Transaction:
 
     def to_formatted_row(self) -> dict[str, str]:
         return {
-            "direction": self.direction.value,
+            "io_flow": self.io_flow.value,
             "date": self.date.isoformat(),
             "operation_type": self.operation_type.value,
             "asset_id": self.asset_id,
@@ -165,7 +166,7 @@ def format_decimal(value: Decimal | None) -> str:
 
 
 FORMATTED_COLUMNS = [
-    "direction",
+    "io_flow",
     "date",
     "operation_type",
     "asset_id",
