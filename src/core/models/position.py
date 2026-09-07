@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from typing import Mapping
 
+from .asset import Asset
+
 
 def parse_position_decimal(value: str) -> Decimal:
     try:
@@ -21,10 +23,25 @@ class Position:
     total_acquired_quantity: Decimal
     total_sold_quantity: Decimal
     invested_capital: Decimal
+    asset: Asset | None = None
 
     @property
     def key(self) -> str:
         return self.asset_id
+
+    def with_asset(self, asset: Asset) -> Position:
+        if asset.asset_id != self.asset_id:
+            raise ValueError(
+                f"Asset {asset.asset_id!r} does not match position {self.asset_id!r}"
+            )
+        return Position(
+            asset_id=self.asset_id,
+            current_quantity=self.current_quantity,
+            total_acquired_quantity=self.total_acquired_quantity,
+            total_sold_quantity=self.total_sold_quantity,
+            invested_capital=self.invested_capital,
+            asset=asset,
+        )
 
     @classmethod
     def from_store_row(cls, row: Mapping[str, str]) -> Position:
