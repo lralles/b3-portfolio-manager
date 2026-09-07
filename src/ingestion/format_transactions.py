@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 import csv
 import sys
-from dataclasses import asdict
 from pathlib import Path
 
 # Allow this file to be run directly from the repository root as well as with
@@ -12,6 +11,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from src.core.models.account import Account
 from src.core.models.asset import Asset
+from src.core.repositories.account_repository import AccountRepository
+from src.core.repositories.asset_repository import AssetRepository
 from src.core.repositories.transaction_repository import TransactionRepository
 from src.ingestion.b3.transaction_mapper import transaction_from_sanitized_row
 
@@ -66,18 +67,9 @@ def main() -> int:
 
     TransactionRepository(args.output).save(transactions)
 
-    assets_path = args.output.parent.parent / "assets" / "assets.csv"
-    accounts_path = args.output.parent.parent / "accounts" / "accounts.csv"
-    assets_path.parent.mkdir(parents=True, exist_ok=True)
-    accounts_path.parent.mkdir(parents=True, exist_ok=True)
-    with assets_path.open("w", newline="", encoding="utf-8") as fh:
-        writer = csv.DictWriter(fh, fieldnames=["asset_id", "asset_name"])
-        writer.writeheader()
-        writer.writerows(asdict(asset) for asset in assets)
-    with accounts_path.open("w", newline="", encoding="utf-8") as fh:
-        writer = csv.DictWriter(fh, fieldnames=["account_id", "account_name"])
-        writer.writeheader()
-        writer.writerows(asdict(account) for account in accounts)
+    store_path = args.output.parent.parent
+    AssetRepository(store_path / "assets" / "assets.csv").save(assets)
+    AccountRepository(store_path / "accounts" / "accounts.csv").save(accounts)
 
     print(
         f"Wrote {len(transactions)} transactions, {len(assets)} assets, "
