@@ -8,11 +8,12 @@ from pathlib import Path
 
 # Allow this file to be run directly from the repository root as well as with
 # `python -m src.ingestion.format_transactions`.
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from core.models.account import Account
-from core.models.asset import Asset
-from core.models.transaction import FORMATTED_COLUMNS, Transaction
+from src.core.models.account import Account
+from src.core.models.asset import Asset
+from src.core.repositories.transaction_repository import TransactionRepository
+from src.ingestion.b3.transaction_mapper import transaction_from_sanitized_row
 
 
 def load_rows(input_path: Path) -> list[dict[str, str]]:
@@ -55,7 +56,7 @@ def main() -> int:
     asset_ids = {asset.asset_name: asset.asset_id for asset in assets}
     account_ids = {account.account_name: account.account_id for account in accounts}
     transactions = [
-        Transaction.from_sanitized_row(
+        transaction_from_sanitized_row(
             row,
             asset_id=asset_ids[row["produto"].strip()],
             account_id=account_ids[row["instituicao"].strip()],
@@ -63,11 +64,7 @@ def main() -> int:
         for row in rows
     ]
 
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    with args.output.open("w", newline="", encoding="utf-8") as fh:
-        writer = csv.DictWriter(fh, fieldnames=FORMATTED_COLUMNS)
-        writer.writeheader()
-        writer.writerows(transaction.to_formatted_row() for transaction in transactions)
+    TransactionRepository(args.output).save(transactions)
 
     assets_path = args.output.parent.parent / "assets" / "assets.csv"
     accounts_path = args.output.parent.parent / "accounts" / "accounts.csv"
