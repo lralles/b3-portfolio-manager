@@ -17,7 +17,7 @@ class TransactionRepositoryTests(unittest.TestCase):
             date=date(2020, 1, 1),
             operation_type=TransactionOperationType.PURCHASE,
             asset_id="asset_001",
-            account_id="account_001",
+            holding_id="holding_001",
             quantity=Decimal("2"),
             unit_price=Decimal("10"),
             operation_value=Decimal("20"),

@@ -13,7 +13,7 @@ def transaction(
     operation_type: TransactionOperationType,
     *,
     io_flow: IOFlow = IOFlow.INFLOW,
-    account_id: str = "account_001",
+    holding_id: str = "holding_001",
     quantity: str | None = "1",
     operation_value: str | None = "100",
 ) -> Transaction:
@@ -22,7 +22,7 @@ def transaction(
         date=date(2020, 1, 1),
         operation_type=operation_type,
         asset_id="asset_001",
-        account_id=account_id,
+        holding_id=holding_id,
         quantity=Decimal(quantity) if quantity is not None else None,
         unit_price=None,
         operation_value=(Decimal(operation_value) if operation_value is not None else None),
@@ -68,7 +68,7 @@ class BuildPositionsTests(unittest.TestCase):
             transaction(
                 TransactionOperationType.TRANSFER,
                 io_flow=IOFlow.INFLOW,
-                account_id="account_002",
+                holding_id="holding_002",
                 quantity="2",
                 operation_value=None,
             ),
@@ -76,17 +76,17 @@ class BuildPositionsTests(unittest.TestCase):
 
         self.assertEqual(positions, [])
 
-    def test_accounts_are_aggregated_by_asset(self) -> None:
+    def test_holdings_are_aggregated_by_asset(self) -> None:
         positions = build_positions([
             transaction(
                 TransactionOperationType.PURCHASE,
-                account_id="account_001",
+                holding_id="holding_001",
                 quantity="2",
                 operation_value="20",
             ),
             transaction(
                 TransactionOperationType.PURCHASE,
-                account_id="account_002",
+                holding_id="holding_002",
                 quantity="3",
                 operation_value="45",
             ),

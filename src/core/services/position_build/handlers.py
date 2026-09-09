@@ -57,7 +57,7 @@ class SaleHandler:
 
 
 class CustodyTransferHandler:
-    """Custody movements are globally neutral across all accounts."""
+    """Custody movements are globally neutral across all holdings."""
 
     def apply(self, position: PositionAccumulator, transaction: Transaction) -> None:
         return None

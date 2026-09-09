@@ -25,7 +25,7 @@ def transaction(
         date=date(2020, 1, 1),
         operation_type=operation_type,
         asset_id="asset_001",
-        account_id="account_001",
+        holding_id="holding_001",
         quantity=Decimal(quantity) if quantity is not None else None,
         unit_price=None,
         operation_value=(Decimal(operation_value) if operation_value is not None else None),

@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-- `src/core/models/` contains typed domain models for accounts, assets, and transactions.
+- `src/core/models/` contains typed domain models for holdings, assets, and transactions.
 - `src/core/repositories/` provides persistence access, currently via stored CSV files.
 - `src/core/services/` contains business logic such as monthly cash-flow calculations.
 - `src/ingestion/` contains command-line scripts that sanitize XLSX exports and format them into the store model.
