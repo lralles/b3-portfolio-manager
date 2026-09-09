@@ -19,7 +19,7 @@ def transaction(
         date=transaction_date,
         operation_type=TransactionOperationType.PURCHASE,
         asset_id="asset_001",
-        account_id="account_001",
+        holding_id="holding_001",
         quantity=None,
         unit_price=None,
         operation_value=(

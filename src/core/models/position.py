@@ -16,7 +16,7 @@ def parse_position_decimal(value: str) -> Decimal:
 
 @dataclass(frozen=True, slots=True)
 class Position:
-    """The consolidated holding for an asset across all accounts."""
+    """The consolidated position for an asset across all holdings."""
 
     asset_id: str
     current_quantity: Decimal

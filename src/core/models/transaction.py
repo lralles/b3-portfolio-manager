@@ -37,7 +37,7 @@ class Transaction:
     date: date
     operation_type: TransactionOperationType
     asset_id: str
-    account_id: str
+    holding_id: str
     quantity: Decimal | None
     unit_price: Decimal | None
     operation_value: Decimal | None
@@ -49,7 +49,7 @@ class Transaction:
             operation_type = TransactionOperationType(row["operation_type"])
             transaction_date = date.fromisoformat(row["date"])
             asset_id = row["asset_id"].strip()
-            account_id = row["account_id"].strip()
+            holding_id = row["holding_id"].strip()
         except KeyError as exc:
             raise ValueError(f"Missing stored transaction field: {exc.args[0]}") from exc
         except ValueError as exc:
@@ -61,15 +61,15 @@ class Transaction:
 
         if not asset_id:
             raise ValueError("Stored transaction has an empty asset_id")
-        if not account_id:
-            raise ValueError("Stored transaction has an empty account_id")
+        if not holding_id:
+            raise ValueError("Stored transaction has an empty holding_id")
 
         return cls(
             io_flow=io_flow,
             date=transaction_date,
             operation_type=operation_type,
             asset_id=asset_id,
-            account_id=account_id,
+            holding_id=holding_id,
             quantity=parse_decimal(row["quantity"]),
             unit_price=parse_decimal(row["unit_price"]),
             operation_value=parse_decimal(row["operation_value"]),

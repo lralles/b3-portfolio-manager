@@ -34,7 +34,7 @@ OPERATION_TYPES_WITH_OUTFLOW = {
 
 
 def transaction_from_sanitized_row(
-    row: Mapping[str, str], asset_id: str, account_id: str
+    row: Mapping[str, str], asset_id: str, holding_id: str
 ) -> Transaction:
     """Map one sanitized B3 row to the canonical transaction model."""
     try:
@@ -76,7 +76,7 @@ def transaction_from_sanitized_row(
         date=transaction_date,
         operation_type=operation_type,
         asset_id=asset_id,
-        account_id=account_id,
+        holding_id=holding_id,
         quantity=parse_decimal(row["quantidade"]),
         unit_price=parse_decimal(row["preco_unitario"]),
         operation_value=parse_decimal(row["valor_operacao"]),
