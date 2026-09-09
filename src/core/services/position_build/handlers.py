@@ -4,8 +4,8 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Protocol
 
-from ..models.position import Position
-from ..models.transaction import Transaction
+from ...models.position import Position
+from ...models.transaction import Transaction
 
 
 @dataclass(slots=True)

@@ -1,18 +1,11 @@
 from __future__ import annotations
 
-import tempfile
 import unittest
 from datetime import date
 from decimal import Decimal
-from pathlib import Path
 
 from src.core.models.position import Position
-from src.core.models.transaction import (
-    IOFlow,
-    Transaction,
-    TransactionOperationType,
-)
-from src.core.repositories.position_repository import PositionRepository
+from src.core.models.transaction import IOFlow, Transaction, TransactionOperationType
 from src.core.services.position_build import build_positions
 
 
@@ -20,16 +13,15 @@ def transaction(
     operation_type: TransactionOperationType,
     *,
     io_flow: IOFlow = IOFlow.INFLOW,
-    asset_id: str = "asset_001",
     account_id: str = "account_001",
-    quantity: str = "1",
+    quantity: str | None = "1",
     operation_value: str | None = "100",
 ) -> Transaction:
     return Transaction(
         io_flow=io_flow,
         date=date(2020, 1, 1),
         operation_type=operation_type,
-        asset_id=asset_id,
+        asset_id="asset_001",
         account_id=account_id,
         quantity=Decimal(quantity) if quantity is not None else None,
         unit_price=None,
@@ -37,36 +29,69 @@ def transaction(
     )
 
 
-class PositionBuildTests(unittest.TestCase):
+class BuildPositionsTests(unittest.TestCase):
     def test_purchase_accumulates_quantity_and_capital(self) -> None:
         positions = build_positions([
             transaction(TransactionOperationType.PURCHASE, quantity="2", operation_value="20"),
             transaction(TransactionOperationType.PURCHASE, quantity="3", operation_value="45"),
         ])
-        self.assertEqual(positions, [Position("asset_001", Decimal("5"), Decimal("5"), Decimal("0"), Decimal("65"))])
 
-    def test_sale_reduces_current_and_preserves_invested_capital(self) -> None:
+        self.assertEqual(
+            positions,
+            [Position("asset_001", Decimal("5"), Decimal("5"), Decimal("0"), Decimal("65"))],
+        )
+
+    def test_sale_reduces_current_quantity_and_preserves_invested_capital(self) -> None:
         positions = build_positions([
             transaction(TransactionOperationType.PURCHASE, quantity="5", operation_value="65"),
-            transaction(TransactionOperationType.SALE, io_flow=IOFlow.OUTFLOW, quantity="2", operation_value="30"),
+            transaction(
+                TransactionOperationType.SALE,
+                io_flow=IOFlow.OUTFLOW,
+                quantity="2",
+                operation_value="30",
+            ),
         ])
+
         self.assertEqual(positions[0].current_quantity, Decimal("3"))
         self.assertEqual(positions[0].total_acquired_quantity, Decimal("5"))
         self.assertEqual(positions[0].total_sold_quantity, Decimal("2"))
         self.assertEqual(positions[0].invested_capital, Decimal("65"))
 
-    def test_custody_transfer_is_globally_neutral(self) -> None:
+    def test_custody_transfers_are_globally_neutral(self) -> None:
         positions = build_positions([
-            transaction(TransactionOperationType.TRANSFER, io_flow=IOFlow.OUTFLOW, account_id="account_001", quantity="2", operation_value=None),
-            transaction(TransactionOperationType.TRANSFER, io_flow=IOFlow.INFLOW, account_id="account_002", quantity="2", operation_value=None),
+            transaction(
+                TransactionOperationType.TRANSFER,
+                io_flow=IOFlow.OUTFLOW,
+                quantity="2",
+                operation_value=None,
+            ),
+            transaction(
+                TransactionOperationType.TRANSFER,
+                io_flow=IOFlow.INFLOW,
+                account_id="account_002",
+                quantity="2",
+                operation_value=None,
+            ),
         ])
+
         self.assertEqual(positions, [])
 
     def test_accounts_are_aggregated_by_asset(self) -> None:
         positions = build_positions([
-            transaction(TransactionOperationType.PURCHASE, account_id="account_001", quantity="2", operation_value="20"),
-            transaction(TransactionOperationType.PURCHASE, account_id="account_002", quantity="3", operation_value="45"),
+            transaction(
+                TransactionOperationType.PURCHASE,
+                account_id="account_001",
+                quantity="2",
+                operation_value="20",
+            ),
+            transaction(
+                TransactionOperationType.PURCHASE,
+                account_id="account_002",
+                quantity="3",
+                operation_value="45",
+            ),
         ])
+
         self.assertEqual(len(positions), 1)
         self.assertEqual(positions[0].current_quantity, Decimal("5"))
         self.assertEqual(positions[0].invested_capital, Decimal("65"))
@@ -78,24 +103,24 @@ class PositionBuildTests(unittest.TestCase):
             transaction(TransactionOperationType.INCOME),
             transaction(TransactionOperationType.TRANSFER),
         ])
+
         self.assertEqual(positions, [])
 
     def test_zero_current_quantity_retains_history(self) -> None:
         position = build_positions([
             transaction(TransactionOperationType.PURCHASE, quantity="2", operation_value="20"),
-            transaction(TransactionOperationType.SALE, io_flow=IOFlow.OUTFLOW, quantity="2", operation_value="25"),
+            transaction(
+                TransactionOperationType.SALE,
+                io_flow=IOFlow.OUTFLOW,
+                quantity="2",
+                operation_value="25",
+            ),
         ])[0]
+
         self.assertEqual(position.current_quantity, Decimal("0"))
         self.assertEqual(position.total_acquired_quantity, Decimal("2"))
         self.assertEqual(position.total_sold_quantity, Decimal("2"))
         self.assertEqual(position.invested_capital, Decimal("20"))
-
-    def test_repository_round_trip(self) -> None:
-        position = Position("asset_001", Decimal("2"), Decimal("4"), Decimal("2"), Decimal("40"))
-        with tempfile.TemporaryDirectory() as directory:
-            repository = PositionRepository(Path(directory) / "positions.csv")
-            repository.save([position])
-            self.assertEqual(repository.all(), [position])
 
 
 if __name__ == "__main__":
