@@ -2,11 +2,9 @@ from __future__ import annotations
 
 from typing import Iterable
 
-from ..models.position import Position
-from ..models.transaction import Transaction, TransactionOperationType
-from ..repositories.position_repository import PositionRepository
-from ..repositories.transaction_repository import TransactionRepository
-from .position_handlers import (
+from ...models.position import Position
+from ...models.transaction import Transaction, TransactionOperationType
+from .handlers import (
     CustodyTransferHandler,
     IgnoredTransactionHandler,
     PositionAccumulator,
@@ -27,7 +25,7 @@ POSITION_HANDLERS: dict[TransactionOperationType, PositionTransactionHandler] = 
 
 
 def build_positions(transactions: Iterable[Transaction]) -> list[Position]:
-    """Build one consolidated position per asset."""
+    """Build one consolidated position per asset from transactions."""
     accumulators: dict[str, PositionAccumulator] = {}
 
     for transaction in transactions:
@@ -52,31 +50,3 @@ def build_positions(transactions: Iterable[Transaction]) -> list[Position]:
         accumulator.to_position()
         for _, accumulator in sorted(accumulators.items())
     ]
-
-
-class PositionBuildService:
-    def __init__(
-        self,
-        transaction_repository: TransactionRepository | None = None,
-        position_repository: PositionRepository | None = None,
-    ) -> None:
-        self.transaction_repository = transaction_repository or TransactionRepository()
-        self.position_repository = position_repository or PositionRepository()
-
-    def build(self) -> list[Position]:
-        return build_positions(self.transaction_repository.all())
-
-    def build_and_save(self) -> list[Position]:
-        positions = self.build()
-        self.position_repository.save(positions)
-        return positions
-
-    def save(self) -> list[Position]:
-        return self.build_and_save()
-
-
-def build_and_save_positions(
-    transaction_repository: TransactionRepository | None = None,
-    position_repository: PositionRepository | None = None,
-) -> list[Position]:
-    return PositionBuildService(transaction_repository, position_repository).save()
