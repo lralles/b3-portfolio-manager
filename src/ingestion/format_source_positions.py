@@ -67,7 +67,7 @@ def main() -> int:
     lookup = asset_lookup([(asset.asset_id, asset.asset_name) for asset in assets])
     positions = [
         source_position_from_sanitized_row(
-            row, asset_id_for_name(row["asset_name"], lookup)
+            row, asset_id_for_name(row["Produto"], lookup)
         )
         for row in rows
     ]

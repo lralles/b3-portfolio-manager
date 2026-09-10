@@ -3,14 +3,28 @@ from __future__ import annotations
 import argparse
 import csv
 import re
-import unicodedata
 import xml.etree.ElementTree as ET
 from pathlib import Path
 from zipfile import ZipFile
 
 
-OUTPUT_COLUMNS = ["evaluation_date", "asset_name", "quantity"]
-POSITION_HEADERS = {"Produto": "asset_name", "Quantidade": "quantity"}
+RAW_COLUMNS = [
+    "Produto",
+    "Instituição",
+    "Conta",
+    "Código de Negociação",
+    "CNPJ da Empresa",
+    "Código ISIN / Distribuição",
+    "Tipo",
+    "Escriturador",
+    "Quantidade",
+    "Quantidade Disponível",
+    "Quantidade Indisponível",
+    "Motivo",
+    "Preço de Fechamento",
+    "Valor Atualizado",
+]
+OUTPUT_COLUMNS = RAW_COLUMNS + ["evaluation_date"]
 
 
 def normalize_text(value: str) -> str:
@@ -87,18 +101,18 @@ def load_position_rows(input_path: Path) -> list[dict[str, str]]:
     if not rows:
         return []
     headers = {
-        column_index(attribute(cell, "r")): normalize_text(cell_value(cell, shared_strings))
+        column_index(attribute(cell, "r")): cell_value(cell, shared_strings)
         for cell in descendants(rows[0], "c")
     }
     records = []
     for row in rows[1:]:
-        record = {column: "" for column in OUTPUT_COLUMNS}
+        record = {column: "" for column in RAW_COLUMNS}
         record["evaluation_date"] = evaluation_date
         for cell in descendants(row, "c"):
-            key = POSITION_HEADERS.get(headers.get(column_index(attribute(cell, "r"))))
-            if key:
-                record[key] = normalize_text(cell_value(cell, shared_strings))
-        if record["asset_name"] or record["quantity"]:
+            header = headers.get(column_index(attribute(cell, "r")))
+            if header in record:
+                record[header] = normalize_text(cell_value(cell, shared_strings))
+        if record["Produto"] and record["Quantidade"]:
             records.append(record)
     return records
 

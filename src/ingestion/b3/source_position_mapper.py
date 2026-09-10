@@ -12,8 +12,8 @@ def source_position_from_sanitized_row(
 ) -> SourcePosition:
     try:
         evaluation_date = date.fromisoformat(row["evaluation_date"].strip())
-        asset_name = row["asset_name"].strip()
-        quantity_value = row["quantity"].strip().replace(",", ".")
+        asset_name = row["Produto"].strip()
+        quantity_value = row["Quantidade"].strip().replace(",", ".")
         quantity = Decimal(quantity_value)
     except KeyError as exc:
         raise ValueError(
@@ -23,6 +23,6 @@ def source_position_from_sanitized_row(
         raise ValueError(f"Invalid sanitized source position: {row!r}") from exc
 
     if not asset_name:
-        raise ValueError("Sanitized source position has an empty asset_name")
+        raise ValueError("Sanitized source position has an empty Produto")
 
     return SourcePosition(evaluation_date, asset_id, asset_name, quantity)
