@@ -2,10 +2,12 @@ from .holding_repository import HoldingRepository
 from .asset_repository import AssetRepository
 from .position_repository import PositionRepository
 from .transaction_repository import TransactionRepository
+from .source_position_repository import SourcePositionRepository
 
 __all__ = [
     "HoldingRepository",
     "AssetRepository",
     "PositionRepository",
     "TransactionRepository",
+    "SourcePositionRepository",
 ]
