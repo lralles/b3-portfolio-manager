@@ -130,14 +130,19 @@ def main() -> int:
         help="Sanitized source-position CSV path.",
     )
     args = parser.parse_args()
-    records = load_position_rows(args.input)
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    with args.output.open("w", newline="", encoding="utf-8") as fh:
+    sanitize(args.input, args.output)
+    return 0
+
+
+def sanitize(input_path: Path, output: Path) -> int:
+    records = load_position_rows(input_path)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with output.open("w", newline="", encoding="utf-8") as fh:
         writer = csv.DictWriter(fh, fieldnames=OUTPUT_COLUMNS)
         writer.writeheader()
         writer.writerows(records)
-    print(f"Wrote {len(records)} source position rows to {args.output}")
-    return 0
+    print(f"Wrote {len(records)} source position rows to {output}")
+    return len(records)
 
 
 if __name__ == "__main__":
