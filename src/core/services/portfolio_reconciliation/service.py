@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from ...repositories.position_repository import PositionRepository
-from ...repositories.source_position_repository import SourcePositionRepository
+from ..position_service import PositionService
+from ..source_position_service import SourcePositionService
 from .position_conflict import PositionConflict
 from .status import PortfolioReconciliationStatus
 
@@ -11,13 +11,13 @@ class PortfolioReconciliationService:
 
     def __init__(
         self,
-        source_position_repository: SourcePositionRepository | None = None,
-        position_repository: PositionRepository | None = None,
+        source_position_repository=None,
+        position_repository=None,
     ) -> None:
         self.source_position_repository = (
-            source_position_repository or SourcePositionRepository()
+            source_position_repository or SourcePositionService()
         )
-        self.position_repository = position_repository or PositionRepository()
+        self.position_repository = position_repository or PositionService()
 
     def reconcile(self) -> PortfolioReconciliationStatus:
         computed_positions = {
@@ -41,8 +41,8 @@ class PortfolioReconciliationService:
 
 
 def reconcile_portfolio(
-    source_position_repository: SourcePositionRepository | None = None,
-    position_repository: PositionRepository | None = None,
+    source_position_repository=None,
+    position_repository=None,
 ) -> PortfolioReconciliationStatus:
     return PortfolioReconciliationService(
         source_position_repository, position_repository

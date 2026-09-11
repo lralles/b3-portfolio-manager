@@ -167,22 +167,27 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    xlsx_files = sorted(args.raw_dir.rglob("*.xlsx"))
+    sanitize(args.raw_dir, args.output)
+    return 0
+
+
+def sanitize(raw_dir: Path, output: Path) -> int:
+    xlsx_files = sorted(raw_dir.rglob("*.xlsx"))
     if not xlsx_files:
-        raise FileNotFoundError(f"No XLSX files found under {args.raw_dir}")
+        raise FileNotFoundError(f"No XLSX files found under {raw_dir}")
 
     records: list[dict[str, str]] = []
     for xlsx_file in xlsx_files:
         records.extend(load_transaction_rows(xlsx_file))
 
-    args.output.parent.mkdir(parents=True, exist_ok=True)
-    with args.output.open("w", newline="", encoding="utf-8") as fh:
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with output.open("w", newline="", encoding="utf-8") as fh:
         writer = csv.DictWriter(fh, fieldnames=OUTPUT_COLUMNS)
         writer.writeheader()
         writer.writerows(records)
 
-    print(f"Wrote {len(records)} transaction rows to {args.output}")
-    return 0
+    print(f"Wrote {len(records)} transaction rows to {output}")
+    return len(records)
 
 
 if __name__ == "__main__":
