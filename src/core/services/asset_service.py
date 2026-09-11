@@ -1,0 +1,19 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+from ..models.asset import Asset
+from ..repositories.asset_repository import AssetRepository
+
+
+class AssetService:
+    """Application service for the stored asset catalog."""
+
+    def __init__(self, path: Path = Path("data/store/assets/assets.csv")) -> None:
+        self._repository = AssetRepository(path)
+
+    def all(self) -> list[Asset]:
+        return self._repository.all()
+
+    def save(self, assets: list[Asset]) -> None:
+        self._repository.save(assets)
