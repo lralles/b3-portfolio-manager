@@ -16,13 +16,14 @@ def transaction(
     io_flow: IOFlow = IOFlow.INFLOW,
     holding_id: str = "holding_001",
     transaction_id: str = "transaction_001",
+    transaction_date: date = date(2020, 1, 1),
     quantity: str | None = "1",
     operation_value: str | None = "100",
 ) -> Transaction:
     return Transaction(
         transaction_id=transaction_id,
         io_flow=io_flow,
-        date=date(2020, 1, 1),
+        date=transaction_date,
         operation_type=operation_type,
         asset_id="asset_001",
         holding_id=holding_id,
@@ -73,6 +74,26 @@ class BuildPositionsTests(unittest.TestCase):
                 )
             ],
         )
+
+    def test_transactions_are_processed_chronologically(self) -> None:
+        positions, profit_losses = build_positions([
+            transaction(
+                TransactionOperationType.SALE,
+                transaction_id="transaction_002",
+                transaction_date=date(2020, 8, 3),
+                quantity="2",
+                operation_value="30",
+            ),
+            transaction(
+                TransactionOperationType.PURCHASE,
+                transaction_date=date(2020, 7, 23),
+                quantity="2",
+                operation_value="26",
+            ),
+        ])
+
+        self.assertEqual(positions[0].current_quantity, Decimal("0"))
+        self.assertEqual(profit_losses[0].value, Decimal("4"))
 
     def test_custody_transfers_are_globally_neutral(self) -> None:
         positions, profit_losses = build_positions([

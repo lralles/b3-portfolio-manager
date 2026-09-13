@@ -179,6 +179,7 @@ def sanitize(raw_dir: Path, output: Path) -> int:
     records: list[dict[str, str]] = []
     for xlsx_file in xlsx_files:
         records.extend(load_transaction_rows(xlsx_file))
+    records.sort(key=lambda record: record["data"])
 
     output.parent.mkdir(parents=True, exist_ok=True)
     with output.open("w", newline="", encoding="utf-8") as fh:

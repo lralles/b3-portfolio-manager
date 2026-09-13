@@ -33,7 +33,8 @@ def build_positions(
     accumulators: dict[str, PositionAccumulator] = {}
     profit_losses: list[ProfitLoss] = []
 
-    for transaction in transactions:
+    ordered_transactions = sorted(transactions, key=lambda transaction: transaction.date)
+    for transaction in ordered_transactions:
         try:
             handler = POSITION_HANDLERS[transaction.operation_type]
         except KeyError as exc:
