@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from ..models.position import Position
+from ..models.profit_loss import ProfitLoss
 from ..repositories.asset_repository import AssetRepository
+from ..repositories.profit_loss_repository import ProfitLossRepository
 from ..repositories.position_repository import PositionRepository
 from ..repositories.transaction_repository import TransactionRepository
 from .position_build import build_positions
@@ -15,20 +17,23 @@ class PositionService:
         transaction_repository: TransactionRepository | None = None,
         position_repository: PositionRepository | None = None,
         asset_repository: AssetRepository | None = None,
+        profit_loss_repository: ProfitLossRepository | None = None,
     ) -> None:
         self.transaction_repository = transaction_repository or TransactionRepository()
         self.position_repository = position_repository or PositionRepository()
         self.asset_repository = asset_repository or AssetRepository()
+        self.profit_loss_repository = profit_loss_repository or ProfitLossRepository()
 
-    def build(self) -> list[Position]:
+    def build(self) -> tuple[list[Position], list[ProfitLoss]]:
         return build_positions(self.transaction_repository.all())
 
-    def build_and_save(self) -> list[Position]:
-        positions = self.build()
+    def build_and_save(self) -> tuple[list[Position], list[ProfitLoss]]:
+        positions, profit_losses = self.build()
         self.position_repository.save(positions)
-        return positions
+        self.profit_loss_repository.save(profit_losses)
+        return positions, profit_losses
 
-    def save(self) -> list[Position]:
+    def save(self) -> tuple[list[Position], list[ProfitLoss]]:
         return self.build_and_save()
 
     def all(self) -> list[Position]:
@@ -48,5 +53,5 @@ class PositionService:
 def build_and_save_positions(
     transaction_repository: TransactionRepository | None = None,
     position_repository: PositionRepository | None = None,
-) -> list[Position]:
+) -> tuple[list[Position], list[ProfitLoss]]:
     return PositionService(transaction_repository, position_repository).save()

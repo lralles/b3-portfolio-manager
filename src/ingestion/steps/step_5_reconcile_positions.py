@@ -5,6 +5,7 @@ from pathlib import Path
 
 from src.core.repositories.asset_repository import AssetRepository
 from src.core.repositories.position_repository import PositionRepository
+from src.core.repositories.profit_loss_repository import ProfitLossRepository
 from src.core.repositories.transaction_repository import TransactionRepository
 from src.core.services.position_service import PositionService
 from src.core.services.portfolio_reconciliation import PortfolioReconciliationService
@@ -16,11 +17,13 @@ def reconcile(
     positions_path: Path,
     assets_path: Path,
     source_positions_path: Path,
+    profit_losses_path: Path = Path("data/store/profit_losses/profit_losses.csv"),
 ):
     position_service = PositionService(
         TransactionRepository(transactions_path),
         PositionRepository(positions_path),
         AssetRepository(assets_path),
+        ProfitLossRepository(profit_losses_path),
     )
     position_service.build_and_save()
     return PortfolioReconciliationService(
@@ -35,8 +38,9 @@ def main() -> int:
     parser.add_argument("--positions", type=Path, default=Path("data/store/computed_positions/positions.csv"))
     parser.add_argument("--assets", type=Path, default=Path("data/store/assets/assets.csv"))
     parser.add_argument("--source-positions", type=Path, default=Path("data/store/source_positions/source_positions.csv"))
+    parser.add_argument("--profit-losses", type=Path, default=Path("data/store/profit_losses/profit_losses.csv"))
     args = parser.parse_args()
-    status = reconcile(args.transactions, args.positions, args.assets, args.source_positions)
+    status = reconcile(args.transactions, args.positions, args.assets, args.source_positions, args.profit_losses)
     print(f"Position reconciliation: {status.status}")
     if status.status != "success":
         for conflict in status.conflicts:

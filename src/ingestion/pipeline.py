@@ -24,12 +24,13 @@ def run(
     transactions = store_dir / "transactions/transactions.csv"
     source_positions = store_dir / "source_positions/source_positions.csv"
     positions = store_dir / "computed_positions/positions.csv"
+    profit_losses = store_dir / "profit_losses/profit_losses.csv"
 
     sanitize_transactions(raw_transactions, sanitized_transactions)
     sanitize_source_positions(raw_position, sanitized_positions)
     ingest_transactions(sanitized_transactions, transactions, assets, holdings)
     ingest_source_positions(sanitized_positions, source_positions, assets)
-    status = reconcile(transactions, positions, assets, source_positions)
+    status = reconcile(transactions, positions, assets, source_positions, profit_losses)
     if status.status != "success":
         raise ValueError(f"Position reconciliation failed: {status.conflicts}")
     return status

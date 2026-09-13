@@ -8,9 +8,11 @@ from pathlib import Path
 
 from src.core.models.asset import Asset
 from src.core.models.position import Position
+from src.core.models.profit_loss import ProfitLoss
 from src.core.models.transaction import IOFlow, Transaction, TransactionOperationType
 from src.core.repositories.asset_repository import AssetRepository
 from src.core.repositories.position_repository import PositionRepository
+from src.core.repositories.profit_loss_repository import ProfitLossRepository
 from src.core.repositories.transaction_repository import TransactionRepository
 from src.core.services.position_service import PositionService
 
@@ -21,6 +23,7 @@ class PositionServiceTests(unittest.TestCase):
             root = Path(directory)
             transaction_repository = TransactionRepository(root / "transactions.csv")
             position_repository = PositionRepository(root / "positions.csv")
+            profit_loss_repository = ProfitLossRepository(root / "profit_losses.csv")
             asset_repository = AssetRepository(root / "assets.csv")
             transaction_repository.save([
                 Transaction(
@@ -37,16 +40,21 @@ class PositionServiceTests(unittest.TestCase):
             ])
             asset_repository.save([Asset("asset_001", "Example Asset")])
             service = PositionService(
-                transaction_repository, position_repository, asset_repository
+                transaction_repository,
+                position_repository,
+                asset_repository,
+                profit_loss_repository,
             )
 
-            saved = service.build_and_save()
+            saved, profit_losses = service.build_and_save()
 
             expected = Position(
                 "asset_001", Decimal("4"), Decimal("4"), Decimal("0"), Decimal("40")
             )
             self.assertEqual(saved, [expected])
             self.assertEqual(position_repository.all(), [expected])
+            self.assertEqual(profit_losses, [])
+            self.assertEqual(profit_loss_repository.all(), [])
 
     def test_all_attaches_the_stored_asset(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

@@ -5,6 +5,7 @@ from datetime import date
 from decimal import Decimal
 
 from src.core.models.position import Position
+from src.core.models.profit_loss import ProfitLoss, ProfitLossType
 from src.core.models.transaction import IOFlow, Transaction, TransactionOperationType
 from src.core.services.position_build import build_positions
 
@@ -14,11 +15,12 @@ def transaction(
     *,
     io_flow: IOFlow = IOFlow.INFLOW,
     holding_id: str = "holding_001",
+    transaction_id: str = "transaction_001",
     quantity: str | None = "1",
     operation_value: str | None = "100",
 ) -> Transaction:
     return Transaction(
-        transaction_id="transaction_001",
+        transaction_id=transaction_id,
         io_flow=io_flow,
         date=date(2020, 1, 1),
         operation_type=operation_type,
@@ -32,7 +34,7 @@ def transaction(
 
 class BuildPositionsTests(unittest.TestCase):
     def test_purchase_accumulates_quantity_and_capital(self) -> None:
-        positions = build_positions([
+        positions, profit_losses = build_positions([
             transaction(TransactionOperationType.PURCHASE, quantity="2", operation_value="20"),
             transaction(TransactionOperationType.PURCHASE, quantity="3", operation_value="45"),
         ])
@@ -41,13 +43,15 @@ class BuildPositionsTests(unittest.TestCase):
             positions,
             [Position("asset_001", Decimal("5"), Decimal("5"), Decimal("0"), Decimal("65"))],
         )
+        self.assertEqual(profit_losses, [])
 
     def test_sale_reduces_current_quantity_and_preserves_invested_capital(self) -> None:
-        positions = build_positions([
+        positions, profit_losses = build_positions([
             transaction(TransactionOperationType.PURCHASE, quantity="5", operation_value="65"),
             transaction(
                 TransactionOperationType.SALE,
                 io_flow=IOFlow.OUTFLOW,
+                transaction_id="transaction_002",
                 quantity="2",
                 operation_value="30",
             ),
@@ -57,9 +61,21 @@ class BuildPositionsTests(unittest.TestCase):
         self.assertEqual(positions[0].total_acquired_quantity, Decimal("5"))
         self.assertEqual(positions[0].total_sold_quantity, Decimal("2"))
         self.assertEqual(positions[0].invested_capital, Decimal("65"))
+        self.assertEqual(
+            profit_losses,
+            [
+                ProfitLoss(
+                    "asset_001",
+                    "transaction_002",
+                    "holding_001",
+                    Decimal("4"),
+                    ProfitLossType.REALIZED,
+                )
+            ],
+        )
 
     def test_custody_transfers_are_globally_neutral(self) -> None:
-        positions = build_positions([
+        positions, profit_losses = build_positions([
             transaction(
                 TransactionOperationType.TRANSFER,
                 io_flow=IOFlow.OUTFLOW,
@@ -76,9 +92,10 @@ class BuildPositionsTests(unittest.TestCase):
         ])
 
         self.assertEqual(positions, [])
+        self.assertEqual(profit_losses, [])
 
     def test_holdings_are_aggregated_by_asset(self) -> None:
-        positions = build_positions([
+        positions, profit_losses = build_positions([
             transaction(
                 TransactionOperationType.PURCHASE,
                 holding_id="holding_001",
@@ -96,19 +113,34 @@ class BuildPositionsTests(unittest.TestCase):
         self.assertEqual(len(positions), 1)
         self.assertEqual(positions[0].current_quantity, Decimal("5"))
         self.assertEqual(positions[0].invested_capital, Decimal("65"))
+        self.assertEqual(profit_losses, [])
 
     def test_non_position_operations_are_ignored(self) -> None:
-        positions = build_positions([
-            transaction(TransactionOperationType.DIVIDEND),
-            transaction(TransactionOperationType.INTEREST_ON_EQUITY),
-            transaction(TransactionOperationType.INCOME),
+        positions, profit_losses = build_positions([
+            transaction(TransactionOperationType.DIVIDEND, transaction_id="transaction_002"),
+            transaction(TransactionOperationType.INTEREST_ON_EQUITY, transaction_id="transaction_003"),
+            transaction(TransactionOperationType.INCOME, transaction_id="transaction_004"),
             transaction(TransactionOperationType.TRANSFER),
         ])
 
         self.assertEqual(positions, [])
+        self.assertEqual(
+            profit_losses,
+            [
+                ProfitLoss(
+                    "asset_001", "transaction_002", "holding_001", Decimal("100"), ProfitLossType.REALIZED
+                ),
+                ProfitLoss(
+                    "asset_001", "transaction_003", "holding_001", Decimal("100"), ProfitLossType.REALIZED
+                ),
+                ProfitLoss(
+                    "asset_001", "transaction_004", "holding_001", Decimal("100"), ProfitLossType.REALIZED
+                ),
+            ],
+        )
 
     def test_zero_current_quantity_retains_history(self) -> None:
-        position = build_positions([
+        positions, _ = build_positions([
             transaction(TransactionOperationType.PURCHASE, quantity="2", operation_value="20"),
             transaction(
                 TransactionOperationType.SALE,
@@ -116,12 +148,12 @@ class BuildPositionsTests(unittest.TestCase):
                 quantity="2",
                 operation_value="25",
             ),
-        ])[0]
+        ])
 
-        self.assertEqual(position.current_quantity, Decimal("0"))
-        self.assertEqual(position.total_acquired_quantity, Decimal("2"))
-        self.assertEqual(position.total_sold_quantity, Decimal("2"))
-        self.assertEqual(position.invested_capital, Decimal("20"))
+        self.assertEqual(positions[0].current_quantity, Decimal("0"))
+        self.assertEqual(positions[0].total_acquired_quantity, Decimal("2"))
+        self.assertEqual(positions[0].total_sold_quantity, Decimal("2"))
+        self.assertEqual(positions[0].invested_capital, Decimal("20"))
 
 
 if __name__ == "__main__":
