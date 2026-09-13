@@ -20,7 +20,7 @@ def sanitized_row(direction: str) -> dict[str, str]:
 class TransactionMapperTests(unittest.TestCase):
     def test_settlement_credit_is_mapped_to_purchase(self) -> None:
         transaction = transaction_from_sanitized_row(
-            sanitized_row("credito"), "asset_001", "holding_001"
+            sanitized_row("credito"), "transaction_001", "asset_001", "holding_001"
         )
 
         self.assertEqual(transaction.io_flow, IOFlow.INFLOW)
@@ -28,7 +28,7 @@ class TransactionMapperTests(unittest.TestCase):
 
     def test_settlement_debit_is_mapped_to_sale(self) -> None:
         transaction = transaction_from_sanitized_row(
-            sanitized_row("debito"), "asset_001", "holding_001"
+            sanitized_row("debito"), "transaction_001", "asset_001", "holding_001"
         )
 
         self.assertEqual(transaction.io_flow, IOFlow.OUTFLOW)

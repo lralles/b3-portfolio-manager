@@ -24,6 +24,7 @@ class PositionServiceTests(unittest.TestCase):
             asset_repository = AssetRepository(root / "assets.csv")
             transaction_repository.save([
                 Transaction(
+                    "transaction_001",
                     IOFlow.INFLOW,
                     date(2020, 1, 1),
                     TransactionOperationType.PURCHASE,

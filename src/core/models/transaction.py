@@ -33,6 +33,7 @@ def parse_decimal(value: str) -> Decimal | None:
 
 @dataclass(frozen=True, slots=True)
 class Transaction:
+    transaction_id: str
     io_flow: IOFlow
     date: date
     operation_type: TransactionOperationType
@@ -45,6 +46,7 @@ class Transaction:
     @classmethod
     def from_store_row(cls, row: Mapping[str, str]) -> Transaction:
         try:
+            transaction_id = row["transaction_id"].strip()
             io_flow = IOFlow(row["io_flow"])
             operation_type = TransactionOperationType(row["operation_type"])
             transaction_date = date.fromisoformat(row["date"])
@@ -63,8 +65,11 @@ class Transaction:
             raise ValueError("Stored transaction has an empty asset_id")
         if not holding_id:
             raise ValueError("Stored transaction has an empty holding_id")
+        if not transaction_id:
+            raise ValueError("Stored transaction has an empty transaction_id")
 
         return cls(
+            transaction_id=transaction_id,
             io_flow=io_flow,
             date=transaction_date,
             operation_type=operation_type,

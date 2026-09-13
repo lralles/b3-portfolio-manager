@@ -21,6 +21,7 @@ def transaction(
     operation_value: str | None = "20",
 ) -> Transaction:
     return Transaction(
+        transaction_id="transaction_001",
         io_flow=IOFlow.INFLOW,
         date=date(2020, 1, 1),
         operation_type=operation_type,

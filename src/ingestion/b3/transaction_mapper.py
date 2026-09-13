@@ -34,7 +34,7 @@ OPERATION_TYPES_WITH_OUTFLOW = {
 
 
 def transaction_from_sanitized_row(
-    row: Mapping[str, str], asset_id: str, holding_id: str
+    row: Mapping[str, str], transaction_id: str, asset_id: str, holding_id: str
 ) -> Transaction:
     """Map one sanitized B3 row to the canonical transaction model."""
     try:
@@ -72,6 +72,7 @@ def transaction_from_sanitized_row(
         raise ValueError(f"Invalid transaction date: {date_value!r}") from exc
 
     return Transaction(
+        transaction_id=transaction_id,
         io_flow=io_flow,
         date=transaction_date,
         operation_type=operation_type,

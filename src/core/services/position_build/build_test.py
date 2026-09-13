@@ -18,6 +18,7 @@ def transaction(
     operation_value: str | None = "100",
 ) -> Transaction:
     return Transaction(
+        transaction_id="transaction_001",
         io_flow=io_flow,
         date=date(2020, 1, 1),
         operation_type=operation_type,

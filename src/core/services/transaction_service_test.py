@@ -13,6 +13,7 @@ from src.core.services.transaction_service import TransactionService
 class TransactionServiceTests(unittest.TestCase):
     def test_save_and_all_round_trip(self) -> None:
         transaction = Transaction(
+            transaction_id="transaction_001",
             io_flow=IOFlow.INFLOW,
             date=date(2020, 1, 1),
             operation_type=TransactionOperationType.PURCHASE,

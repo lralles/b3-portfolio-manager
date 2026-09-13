@@ -45,10 +45,11 @@ def ingest(
     transactions = [
         transaction_from_sanitized_row(
             row,
+            transaction_id=f"transaction_{index:03d}",
             asset_id=assets[row["produto"].strip()].asset_id,
             holding_id=holdings[row["instituicao"].strip()].holding_id,
         )
-        for row in rows
+        for index, row in enumerate(rows, start=1)
     ]
     TransactionService(output_path).save(transactions)
     return transactions
