@@ -15,6 +15,7 @@ def transaction(
     operation_value: str | None,
 ) -> Transaction:
     return Transaction(
+        transaction_id="transaction_001",
         io_flow=io_flow,
         date=transaction_date,
         operation_type=TransactionOperationType.PURCHASE,

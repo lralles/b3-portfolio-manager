@@ -9,6 +9,7 @@ from ..models.transaction import Transaction
 
 
 TRANSACTION_COLUMNS = [
+    "transaction_id",
     "io_flow",
     "date",
     "operation_type",
@@ -38,6 +39,7 @@ class TransactionRepository:
 
 def _to_store_row(transaction: Transaction) -> dict[str, str]:
     return {
+        "transaction_id": transaction.transaction_id,
         "io_flow": transaction.io_flow.value,
         "date": transaction.date.isoformat(),
         "operation_type": transaction.operation_type.value,

@@ -13,6 +13,7 @@ from src.core.repositories.transaction_repository import TransactionRepository
 class TransactionRepositoryTests(unittest.TestCase):
     def test_repository_round_trip(self) -> None:
         transaction = Transaction(
+            transaction_id="transaction_001",
             io_flow=IOFlow.INFLOW,
             date=date(2020, 1, 1),
             operation_type=TransactionOperationType.PURCHASE,
