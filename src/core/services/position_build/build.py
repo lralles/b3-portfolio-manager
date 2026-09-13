@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Iterable
 
 from ...models.position import Position
+from ...models.profit_loss import ProfitLoss
 from ...models.transaction import Transaction, TransactionOperationType
 from .handlers import (
     CustodyTransferHandler,
@@ -12,6 +13,7 @@ from .handlers import (
     PurchaseHandler,
     SaleHandler,
 )
+from .profit_loss_calculation import calculate_profit_loss
 
 
 POSITION_HANDLERS: dict[TransactionOperationType, PositionTransactionHandler] = {
@@ -24,11 +26,15 @@ POSITION_HANDLERS: dict[TransactionOperationType, PositionTransactionHandler] = 
 }
 
 
-def build_positions(transactions: Iterable[Transaction]) -> list[Position]:
-    """Build one consolidated position per asset from transactions."""
+def build_positions(
+    transactions: Iterable[Transaction],
+) -> tuple[list[Position], list[ProfitLoss]]:
+    """Build consolidated positions and realized profit/loss from transactions."""
     accumulators: dict[str, PositionAccumulator] = {}
+    profit_losses: list[ProfitLoss] = []
 
-    for transaction in transactions:
+    ordered_transactions = sorted(transactions, key=lambda transaction: transaction.date)
+    for transaction in ordered_transactions:
         try:
             handler = POSITION_HANDLERS[transaction.operation_type]
         except KeyError as exc:
@@ -37,16 +43,29 @@ def build_positions(transactions: Iterable[Transaction]) -> list[Position]:
                 f"{transaction.operation_type.value!r}"
             ) from exc
 
+        position = accumulators.get(transaction.asset_id)
+        if transaction.operation_type is TransactionOperationType.SALE:
+            position = accumulators.setdefault(
+                transaction.asset_id,
+                PositionAccumulator(asset_id=transaction.asset_id),
+            )
+
+        profit_loss = calculate_profit_loss(transaction, position)
+        if profit_loss is not None:
+            profit_losses.append(profit_loss)
+
         if isinstance(handler, (CustodyTransferHandler, IgnoredTransactionHandler)):
             continue
 
-        position = accumulators.setdefault(
-            transaction.asset_id,
-            PositionAccumulator(asset_id=transaction.asset_id),
-        )
+        if position is None:
+            position = accumulators.setdefault(
+                transaction.asset_id,
+                PositionAccumulator(asset_id=transaction.asset_id),
+            )
         handler.apply(position, transaction)
 
-    return [
+    positions = [
         accumulator.to_position()
         for _, accumulator in sorted(accumulators.items())
     ]
+    return positions, profit_losses
