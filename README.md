@@ -4,6 +4,10 @@ A small Python project for processing B3 portfolio data.
 
 ## Pipeline
 
+Before running the pipeline, copy `config/config.template.yaml` to
+`config/config.yaml` and adjust the paths if needed. The local configuration is
+ignored by Git.
+
 ```bash
 ./.venv/bin/python -m src.ingestion.pipeline
 ```

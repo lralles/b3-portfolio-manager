@@ -6,6 +6,7 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Iterable, Mapping
 
+from config import Config
 from ..models.source_position import SourcePosition
 
 
@@ -15,9 +16,11 @@ SOURCE_POSITION_COLUMNS = ["evaluation_date", "asset_id", "asset_name", "quantit
 class SourcePositionRepository:
     def __init__(
         self,
-        csv_path: Path = Path("data/store/source_positions/source_positions.csv"),
+        csv_path: Path | None = None,
+        config: Config | None = None,
     ) -> None:
-        self.csv_path = csv_path
+        self.config = config or Config()
+        self.csv_path = csv_path or self.config.source_positions_file
 
     def all(self) -> list[SourcePosition]:
         with self.csv_path.open(newline="", encoding="utf-8") as fh:

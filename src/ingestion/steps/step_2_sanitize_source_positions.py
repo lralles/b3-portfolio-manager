@@ -5,6 +5,8 @@ import csv
 import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
+
+from config import Config
 from zipfile import ZipFile
 
 
@@ -118,15 +120,16 @@ def load_position_rows(input_path: Path) -> list[dict[str, str]]:
 
 
 def main() -> int:
+    config = Config()
     parser = argparse.ArgumentParser(description="Sanitize one B3 position XLSX into CSV.")
     parser.add_argument(
         "--input", type=Path,
-        default=Path("data/raw/position/2020/posicao-2020-12-31.xlsx"),
+        default=config.raw_position_file,
         help="The single raw B3 position XLSX to ingest.",
     )
     parser.add_argument(
         "--output", type=Path,
-        default=Path("data/santized/positions/source_positions.csv"),
+        default=config.sanitized_positions_file,
         help="Sanitized source-position CSV path.",
     )
     args = parser.parse_args()

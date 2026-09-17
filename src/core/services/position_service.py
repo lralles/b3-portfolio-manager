@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from config import Config
+
 from ..models.position import Position
 from ..models.profit_loss import ProfitLoss
 from ..repositories.asset_repository import AssetRepository
@@ -18,11 +20,19 @@ class PositionService:
         position_repository: PositionRepository | None = None,
         asset_repository: AssetRepository | None = None,
         profit_loss_repository: ProfitLossRepository | None = None,
+        config: Config | None = None,
     ) -> None:
-        self.transaction_repository = transaction_repository or TransactionRepository()
-        self.position_repository = position_repository or PositionRepository()
-        self.asset_repository = asset_repository or AssetRepository()
-        self.profit_loss_repository = profit_loss_repository or ProfitLossRepository()
+        self.config = config or Config()
+        self.transaction_repository = transaction_repository or TransactionRepository(
+            config=self.config
+        )
+        self.position_repository = position_repository or PositionRepository(
+            config=self.config
+        )
+        self.asset_repository = asset_repository or AssetRepository(config=self.config)
+        self.profit_loss_repository = profit_loss_repository or ProfitLossRepository(
+            config=self.config
+        )
 
     def build(self) -> tuple[list[Position], list[ProfitLoss]]:
         return build_positions(self.transaction_repository.all())
@@ -53,5 +63,6 @@ class PositionService:
 def build_and_save_positions(
     transaction_repository: TransactionRepository | None = None,
     position_repository: PositionRepository | None = None,
+    config: Config | None = None,
 ) -> tuple[list[Position], list[ProfitLoss]]:
-    return PositionService(transaction_repository, position_repository).save()
+    return PositionService(transaction_repository, position_repository, config=config).save()

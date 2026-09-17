@@ -6,6 +6,7 @@ import re
 import unicodedata
 from pathlib import Path
 
+from config import Config
 from src.core.services.asset_service import AssetService
 from src.core.services.source_position_service import SourcePositionService
 from src.ingestion.b3.source_position_mapper import source_position_from_sanitized_row
@@ -17,11 +18,17 @@ def normalized(value: str) -> str:
     return re.sub(r"[^A-Z0-9]", "", value.upper())
 
 
-def ingest(input_path: Path, output_path: Path, assets_path: Path):
+def ingest(
+    input_path: Path,
+    output_path: Path,
+    assets_path: Path,
+    config: Config | None = None,
+):
+    config = config or Config()
     with input_path.open(newline="", encoding="utf-8") as fh:
         rows = list(csv.DictReader(fh))
     lookup: dict[str, str] = {}
-    for asset in AssetService(assets_path).all():
+    for asset in AssetService(assets_path, config).all():
         lookup[normalized(asset.asset_name)] = asset.asset_id
         lookup.setdefault(normalized(asset.asset_name.split(" - ", 1)[0]), asset.asset_id)
     positions = [
@@ -31,15 +38,16 @@ def ingest(input_path: Path, output_path: Path, assets_path: Path):
         )
         for row in rows
     ]
-    SourcePositionService(output_path).save(positions)
+    SourcePositionService(output_path, config).save(positions)
     return positions
 
 
 def main() -> int:
+    config = Config()
     parser = argparse.ArgumentParser(description="Ingest source positions for quality checks.")
-    parser.add_argument("--input", type=Path, default=Path("data/santized/positions/source_positions.csv"))
-    parser.add_argument("--output", type=Path, default=Path("data/store/source_positions/source_positions.csv"))
-    parser.add_argument("--assets", type=Path, default=Path("data/store/assets/assets.csv"))
+    parser.add_argument("--input", type=Path, default=config.sanitized_positions_file)
+    parser.add_argument("--output", type=Path, default=config.source_positions_file)
+    parser.add_argument("--assets", type=Path, default=config.assets_file)
     args = parser.parse_args()
     positions = ingest(args.input, args.output, args.assets)
     print(f"Wrote {len(positions)} source positions to {args.output}")

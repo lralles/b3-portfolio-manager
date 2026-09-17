@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
+from config import Config
 from src.core.repositories.asset_repository import AssetRepository
 from src.core.repositories.position_repository import PositionRepository
 from src.core.repositories.profit_loss_repository import ProfitLossRepository
@@ -17,28 +18,33 @@ def reconcile(
     positions_path: Path,
     assets_path: Path,
     source_positions_path: Path,
-    profit_losses_path: Path = Path("data/store/profit_losses/profit_losses.csv"),
+    profit_losses_path: Path | None = None,
+    config: Config | None = None,
 ):
+    config = config or Config()
+    profit_losses_path = profit_losses_path or config.profit_losses_file
     position_service = PositionService(
-        TransactionRepository(transactions_path),
-        PositionRepository(positions_path),
-        AssetRepository(assets_path),
-        ProfitLossRepository(profit_losses_path),
+        TransactionRepository(transactions_path, config),
+        PositionRepository(positions_path, config),
+        AssetRepository(assets_path, config),
+        ProfitLossRepository(profit_losses_path, config),
     )
     position_service.build_and_save()
     return PortfolioReconciliationService(
-        SourcePositionService(source_positions_path),
+        SourcePositionService(source_positions_path, config),
         position_service,
+        config,
     ).reconcile()
 
 
 def main() -> int:
+    config = Config()
     parser = argparse.ArgumentParser(description="Rebuild and reconcile portfolio positions.")
-    parser.add_argument("--transactions", type=Path, default=Path("data/store/transactions/transactions.csv"))
-    parser.add_argument("--positions", type=Path, default=Path("data/store/computed_positions/positions.csv"))
-    parser.add_argument("--assets", type=Path, default=Path("data/store/assets/assets.csv"))
-    parser.add_argument("--source-positions", type=Path, default=Path("data/store/source_positions/source_positions.csv"))
-    parser.add_argument("--profit-losses", type=Path, default=Path("data/store/profit_losses/profit_losses.csv"))
+    parser.add_argument("--transactions", type=Path, default=config.transactions_file)
+    parser.add_argument("--positions", type=Path, default=config.positions_file)
+    parser.add_argument("--assets", type=Path, default=config.assets_file)
+    parser.add_argument("--source-positions", type=Path, default=config.source_positions_file)
+    parser.add_argument("--profit-losses", type=Path, default=config.profit_losses_file)
     args = parser.parse_args()
     status = reconcile(args.transactions, args.positions, args.assets, args.source_positions, args.profit_losses)
     print(f"Position reconciliation: {status.status}")

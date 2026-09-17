@@ -4,6 +4,7 @@ import csv
 from pathlib import Path
 from typing import Iterable
 
+from config import Config
 from ..models.asset import Asset
 
 
@@ -13,9 +14,11 @@ ASSET_COLUMNS = ["asset_id", "asset_name"]
 class AssetRepository:
     def __init__(
         self,
-        csv_path: Path = Path("data/store/assets/assets.csv"),
+        csv_path: Path | None = None,
+        config: Config | None = None,
     ) -> None:
-        self.csv_path = csv_path
+        self.config = config or Config()
+        self.csv_path = csv_path or self.config.assets_file
 
     def all(self) -> list[Asset]:
         with self.csv_path.open(newline="", encoding="utf-8") as fh:
