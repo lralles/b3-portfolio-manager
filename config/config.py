@@ -1,19 +1,64 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
+from typing import ClassVar
 
 
+@dataclass(frozen=True, init=False)
 class Config:
     """Application paths loaded from the repository configuration file."""
 
-    _CONFIG_FILE = Path(__file__).with_name("config.yaml")
+    raw_transactions_dir: Path
+    raw_position_file: Path
+    sanitized_dir: Path
+    sanitized_transactions_file: Path
+    sanitized_positions_file: Path
+    store_dir: Path
+    assets_file: Path
+    holdings_file: Path
+    transactions_file: Path
+    source_positions_file: Path
+    positions_file: Path
+    profit_losses_file: Path
+
+    _CONFIG_FILE: ClassVar[Path] = Path(__file__).with_name("config.yaml")
+    _PATH_FIELDS: ClassVar[tuple[str, ...]] = (
+        "raw_transactions_dir",
+        "raw_position_file",
+        "sanitized_dir",
+        "sanitized_transactions_file",
+        "sanitized_positions_file",
+        "store_dir",
+        "assets_file",
+        "holdings_file",
+        "transactions_file",
+        "source_positions_file",
+        "positions_file",
+        "profit_losses_file",
+    )
 
     def __init__(self) -> None:
         values = _load_yaml_paths(self._CONFIG_FILE)
         project_root = self._CONFIG_FILE.parent.parent
-        for name, value in values.items():
-            path = Path(value)
-            setattr(self, name, path if path.is_absolute() else project_root / path)
+        missing = set(self._PATH_FIELDS) - values.keys()
+        unexpected = values.keys() - set(self._PATH_FIELDS)
+        if missing or unexpected:
+            problems = []
+            if missing:
+                problems.append(f"missing fields: {sorted(missing)}")
+            if unexpected:
+                problems.append(f"unexpected fields: {sorted(unexpected)}")
+            raise ValueError("Invalid configuration (" + "; ".join(problems) + ")")
+
+        for name in self._PATH_FIELDS:
+            configured_path = Path(values[name])
+            resolved_path = (
+                configured_path
+                if configured_path.is_absolute()
+                else project_root / configured_path
+            )
+            object.__setattr__(self, name, resolved_path)
 
 
 def _load_yaml_paths(path: Path) -> dict[str, str]:
