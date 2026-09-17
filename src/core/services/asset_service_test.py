@@ -18,6 +18,18 @@ class AssetServiceTests(unittest.TestCase):
 
             self.assertEqual(service.all(), assets)
 
+    def test_update_changes_isin_without_changing_asset_identity(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            service = AssetService(Path(directory) / "assets.csv")
+            service.save([Asset("asset_001", "Example Asset")])
+
+            updated = service.update(
+                Asset("asset_001", "Example Asset", "BR1234567890")
+            )
+
+            self.assertEqual(updated, Asset("asset_001", "Example Asset", "BR1234567890"))
+            self.assertEqual(service.all(), [updated])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -19,3 +19,6 @@ class AssetService:
 
     def save(self, assets: list[Asset]) -> None:
         self._repository.save(assets)
+
+    def update(self, asset: Asset) -> Asset:
+        return self._repository.update(asset)

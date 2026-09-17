@@ -16,6 +16,7 @@ RAW_COLUMNS = [
     "Conta",
     "Código de Negociação",
     "CNPJ da Empresa",
+    "Código ISIN",
     "Código ISIN / Distribuição",
     "Tipo",
     "Escriturador",
@@ -67,14 +68,22 @@ def read_shared_strings(zf: ZipFile) -> list[str]:
 
 
 def workbook_sheet_target(zf: ZipFile) -> str:
+    return workbook_sheet_targets(zf)[0]
+
+
+def workbook_sheet_targets(zf: ZipFile) -> list[str]:
     workbook = ET.fromstring(zf.read("xl/workbook.xml"))
     relationships = ET.fromstring(zf.read("xl/_rels/workbook.xml.rels"))
-    sheet = descendants(workbook, "sheet")[0]
-    relationship_id = attribute(sheet, "id")
-    for relationship in descendants(relationships, "Relationship"):
-        if attribute(relationship, "Id") == relationship_id:
-            return f"xl/{attribute(relationship, 'Target').lstrip('/')}"
-    raise ValueError(f"Could not resolve worksheet target for {relationship_id}")
+    targets = []
+    for sheet in descendants(workbook, "sheet"):
+        relationship_id = attribute(sheet, "id")
+        for relationship in descendants(relationships, "Relationship"):
+            if attribute(relationship, "Id") == relationship_id:
+                targets.append(f"xl/{attribute(relationship, 'Target').lstrip('/')}")
+                break
+        else:
+            raise ValueError(f"Could not resolve worksheet target for {relationship_id}")
+    return targets
 
 
 def cell_value(cell: ET.Element, shared_strings: list[str]) -> str:
@@ -97,25 +106,33 @@ def load_position_rows(input_path: Path) -> list[dict[str, str]]:
     evaluation_date = evaluation_date_from_filename(input_path)
     with ZipFile(input_path) as zf:
         shared_strings = read_shared_strings(zf)
-        sheet = ET.fromstring(zf.read(workbook_sheet_target(zf)))
-
-    rows = descendants(sheet, "row")
-    if not rows:
-        return []
-    headers = {
-        column_index(attribute(cell, "r")): cell_value(cell, shared_strings)
-        for cell in descendants(rows[0], "c")
-    }
-    records = []
-    for row in rows[1:]:
-        record = {column: "" for column in RAW_COLUMNS}
-        record["evaluation_date"] = evaluation_date
-        for cell in descendants(row, "c"):
-            header = headers.get(column_index(attribute(cell, "r")))
-            if header in record:
-                record[header] = normalize_text(cell_value(cell, shared_strings))
-        if record["Produto"] and record["Quantidade"]:
-            records.append(record)
+        records = []
+        for target in workbook_sheet_targets(zf):
+            sheet = ET.fromstring(zf.read(target))
+            rows = descendants(sheet, "row")
+            if not rows:
+                continue
+            headers = {
+                column_index(attribute(cell, "r")): normalize_text(
+                    cell_value(cell, shared_strings)
+                )
+                for cell in descendants(rows[0], "c")
+            }
+            for row in rows[1:]:
+                record = {column: "" for column in RAW_COLUMNS}
+                record["evaluation_date"] = evaluation_date
+                for cell in descendants(row, "c"):
+                    header = headers.get(column_index(attribute(cell, "r")))
+                    if header in record:
+                        record[header] = normalize_text(
+                            cell_value(cell, shared_strings)
+                        )
+                if not record["Código ISIN"]:
+                    record["Código ISIN"] = record[
+                        "Código ISIN / Distribuição"
+                    ].split(" - ", 1)[0].strip()
+                if record["Produto"] and record["Quantidade"]:
+                    records.append(record)
     return records
 
 
