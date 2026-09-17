@@ -1,0 +1,15 @@
+# Copy this file to config.yaml and adjust the paths for your environment.
+# Paths are resolved relative to the repository root unless they are absolute.
+paths:
+  raw_transactions_dir:
+  raw_position_file:
+  sanitized_dir:
+  sanitized_transactions_file:
+  sanitized_positions_file:
+  store_dir:
+  assets_file:
+  holdings_file:
+  transactions_file:
+  source_positions_file:
+  positions_file:
+  profit_losses_file:

@@ -6,6 +6,8 @@ import re
 import unicodedata
 import xml.etree.ElementTree as ET
 from pathlib import Path
+
+from config import Config
 from zipfile import ZipFile
 
 
@@ -152,17 +154,18 @@ def load_transaction_rows(xlsx_path: Path) -> list[dict[str, str]]:
 
 
 def main() -> int:
+    config = Config()
     parser = argparse.ArgumentParser(description="Sanitize transaction XLSX files into one CSV.")
     parser.add_argument(
         "--raw-dir",
         type=Path,
-        default=Path("data/raw/transactions"),
+        default=config.raw_transactions_dir,
         help="Directory containing raw transaction XLSX files.",
     )
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path("data/santized/transactions/transactions.csv"),
+        default=config.sanitized_transactions_file,
         help="Output CSV path.",
     )
     args = parser.parse_args()

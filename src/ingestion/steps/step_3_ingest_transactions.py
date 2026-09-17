@@ -4,6 +4,7 @@ import argparse
 import csv
 from pathlib import Path
 
+from config import Config
 from src.core.models.asset import Asset
 from src.core.models.holding import Holding
 from src.core.models.transaction import Transaction
@@ -22,7 +23,9 @@ def ingest(
     output_path: Path,
     assets_path: Path,
     holdings_path: Path,
+    config: Config | None = None,
 ) -> list[Transaction]:
+    config = config or Config()
     with input_path.open(newline="", encoding="utf-8") as fh:
         rows = list(csv.DictReader(fh))
 
@@ -38,8 +41,8 @@ def ingest(
     ]
     # Recreate these catalogs before mapping transactions because their IDs are
     # required by the canonical transaction model.
-    AssetService(assets_path).save(asset_models)
-    HoldingService(holdings_path).save(holding_models)
+    AssetService(assets_path, config).save(asset_models)
+    HoldingService(holdings_path, config).save(holding_models)
     assets = {asset.asset_name: asset for asset in asset_models}
     holdings = {holding.holding_name: holding for holding in holding_models}
     transactions = [
@@ -51,16 +54,17 @@ def ingest(
         )
         for index, row in enumerate(rows, start=1)
     ]
-    TransactionService(output_path).save(transactions)
+    TransactionService(output_path, config).save(transactions)
     return transactions
 
 
 def main() -> int:
+    config = Config()
     parser = argparse.ArgumentParser(description="Ingest sanitized transactions.")
-    parser.add_argument("--input", type=Path, default=Path("data/santized/transactions/transactions.csv"))
-    parser.add_argument("--output", type=Path, default=Path("data/store/transactions/transactions.csv"))
-    parser.add_argument("--assets", type=Path, default=Path("data/store/assets/assets.csv"))
-    parser.add_argument("--holdings", type=Path, default=Path("data/store/holdings/holdings.csv"))
+    parser.add_argument("--input", type=Path, default=config.sanitized_transactions_file)
+    parser.add_argument("--output", type=Path, default=config.transactions_file)
+    parser.add_argument("--assets", type=Path, default=config.assets_file)
+    parser.add_argument("--holdings", type=Path, default=config.holdings_file)
     args = parser.parse_args()
     transactions = ingest(args.input, args.output, args.assets, args.holdings)
     print(

@@ -5,6 +5,7 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Iterable, Mapping
 
+from config import Config
 from ..models.profit_loss import (
     PROFIT_LOSS_COLUMNS,
     ProfitLoss,
@@ -15,9 +16,11 @@ from ..models.profit_loss import (
 class ProfitLossRepository:
     def __init__(
         self,
-        csv_path: Path = Path("data/store/profit_losses/profit_losses.csv"),
+        csv_path: Path | None = None,
+        config: Config | None = None,
     ) -> None:
-        self.csv_path = csv_path
+        self.config = config or Config()
+        self.csv_path = csv_path or self.config.profit_losses_file
 
     def all(self) -> list[ProfitLoss]:
         with self.csv_path.open(newline="", encoding="utf-8") as fh:

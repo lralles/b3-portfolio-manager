@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from config import Config
 from ..position_service import PositionService
 from ..source_position_service import SourcePositionService
 from .position_conflict import PositionConflict
@@ -13,11 +14,13 @@ class PortfolioReconciliationService:
         self,
         source_position_repository=None,
         position_repository=None,
+        config: Config | None = None,
     ) -> None:
+        self.config = config or Config()
         self.source_position_repository = (
-            source_position_repository or SourcePositionService()
+            source_position_repository or SourcePositionService(config=self.config)
         )
-        self.position_repository = position_repository or PositionService()
+        self.position_repository = position_repository or PositionService(config=self.config)
 
     def reconcile(self) -> PortfolioReconciliationStatus:
         computed_positions = {
@@ -43,7 +46,8 @@ class PortfolioReconciliationService:
 def reconcile_portfolio(
     source_position_repository=None,
     position_repository=None,
+    config: Config | None = None,
 ) -> PortfolioReconciliationStatus:
     return PortfolioReconciliationService(
-        source_position_repository, position_repository
+        source_position_repository, position_repository, config
     ).reconcile()

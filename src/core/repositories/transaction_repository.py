@@ -5,6 +5,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Iterable
 
+from config import Config
 from ..models.transaction import Transaction
 
 
@@ -22,8 +23,11 @@ TRANSACTION_COLUMNS = [
 
 
 class TransactionRepository:
-    def __init__(self, csv_path: Path = Path("data/store/transactions/transactions.csv")) -> None:
-        self.csv_path = csv_path
+    def __init__(
+        self, csv_path: Path | None = None, config: Config | None = None
+    ) -> None:
+        self.config = config or Config()
+        self.csv_path = csv_path or self.config.transactions_file
 
     def all(self) -> list[Transaction]:
         with self.csv_path.open(newline="", encoding="utf-8") as fh:

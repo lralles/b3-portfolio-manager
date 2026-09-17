@@ -4,15 +4,18 @@ import csv
 from pathlib import Path
 from typing import Iterable
 
+from config import Config
 from ..models.position import POSITION_COLUMNS, Position
 
 
 class PositionRepository:
     def __init__(
         self,
-        csv_path: Path = Path("data/store/computed_positions/positions.csv"),
+        csv_path: Path | None = None,
+        config: Config | None = None,
     ) -> None:
-        self.csv_path = csv_path
+        self.config = config or Config()
+        self.csv_path = csv_path or self.config.positions_file
 
     def all(self) -> list[Position]:
         with self.csv_path.open(newline="", encoding="utf-8") as fh:
