@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from src.core.models.asset import Asset
+from src.core.models.asset import Asset, AssetType
 from src.core.services.asset_service import AssetService
 
 
@@ -24,10 +24,13 @@ class AssetServiceTests(unittest.TestCase):
             service.save([Asset("asset_001", "Example Asset")])
 
             updated = service.update(
-                Asset("asset_001", "Example Asset", "BR1234567890")
+                Asset("asset_001", "Example Asset", "BR1234567890", AssetType.STOCKS)
             )
 
-            self.assertEqual(updated, Asset("asset_001", "Example Asset", "BR1234567890"))
+            self.assertEqual(
+                updated,
+                Asset("asset_001", "Example Asset", "BR1234567890", AssetType.STOCKS),
+            )
             self.assertEqual(service.all(), [updated])
 
 

@@ -5,10 +5,10 @@ from pathlib import Path
 from typing import Iterable, Mapping
 
 from config import Config
-from ..models.asset import Asset
+from ..models.asset import Asset, AssetType
 
 
-ASSET_COLUMNS = ["asset_id", "asset_name", "isin"]
+ASSET_COLUMNS = ["asset_id", "asset_name", "isin", "asset_type"]
 
 
 class AssetRepository:
@@ -46,6 +46,7 @@ def _to_store_row(asset: Asset) -> dict[str, str]:
         "asset_id": asset.asset_id,
         "asset_name": asset.asset_name,
         "isin": asset.isin or "",
+        "asset_type": asset.asset_type.value if asset.asset_type else "",
     }
 
 
@@ -54,6 +55,8 @@ def _from_store_row(row: Mapping[str, str]) -> Asset:
         asset_id = row["asset_id"].strip()
         asset_name = row["asset_name"].strip()
         isin = row.get("isin", "").strip() or None
+        asset_type_value = row.get("asset_type", "").strip()
+        asset_type = AssetType(asset_type_value) if asset_type_value else None
     except KeyError as exc:
         raise ValueError(f"Missing stored asset field: {exc.args[0]}") from exc
 
@@ -62,4 +65,9 @@ def _from_store_row(row: Mapping[str, str]) -> Asset:
     if not asset_name:
         raise ValueError(f"Stored asset {asset_id!r} has an empty asset_name")
 
-    return Asset(asset_id=asset_id, asset_name=asset_name, isin=isin)
+    return Asset(
+        asset_id=asset_id,
+        asset_name=asset_name,
+        isin=isin,
+        asset_type=asset_type,
+    )

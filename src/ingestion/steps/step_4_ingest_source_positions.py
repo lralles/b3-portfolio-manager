@@ -8,7 +8,7 @@ from dataclasses import replace
 from pathlib import Path
 
 from config import Config
-from src.core.models.asset import Asset
+from src.core.models.asset import Asset, AssetType
 from src.core.services.asset_service import AssetService
 from src.core.services.source_position_service import SourcePositionService
 from src.ingestion.b3.source_position_mapper import source_position_from_sanitized_row
@@ -39,9 +39,19 @@ def ingest(
         asset = lookup.get(normalized(row["Produto"])) or lookup.get(
             normalized(row["Produto"].split(" - ", 1)[0])
         )
-        if asset and row.get("Código ISIN", "").strip():
+        isin = row.get("Código ISIN", "").strip()
+        asset_type_value = row.get("asset_type", "").strip()
+        if asset and (isin or asset_type_value):
             asset_service.update(
-                replace(asset, isin=row["Código ISIN"].strip())
+                replace(
+                    asset,
+                    isin=isin or asset.isin,
+                    asset_type=(
+                        AssetType(asset_type_value)
+                        if asset_type_value
+                        else asset.asset_type
+                    ),
+                )
             )
         positions.append(
             source_position_from_sanitized_row(row, asset.asset_id if asset else None)

@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from src.core.models.asset import Asset
+from src.core.models.asset import Asset, AssetType
 from src.core.repositories.asset_repository import AssetRepository
 from src.ingestion.steps.step_4_ingest_source_positions import ingest
 
@@ -27,6 +27,7 @@ class SourcePositionIngestionTests(unittest.TestCase):
                         "Quantidade",
                         "Código ISIN",
                         "Código ISIN / Distribuição",
+                        "asset_type",
                     ],
                 )
                 writer.writeheader()
@@ -37,6 +38,7 @@ class SourcePositionIngestionTests(unittest.TestCase):
                         "Quantidade": "2",
                         "Código ISIN": "BR1234567890",
                         "Código ISIN / Distribuição": "BR1234567890",
+                        "asset_type": "stocks",
                     }
                 )
 
@@ -44,7 +46,7 @@ class SourcePositionIngestionTests(unittest.TestCase):
 
             self.assertEqual(
                 AssetRepository(assets_path).all(),
-                [Asset("asset_001", "Example Asset", "BR1234567890")],
+                [Asset("asset_001", "Example Asset", "BR1234567890", AssetType.STOCKS)],
             )
 
 

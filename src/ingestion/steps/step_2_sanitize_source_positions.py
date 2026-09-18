@@ -7,6 +7,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from config import Config
+from src.core.models.asset import AssetType
 from zipfile import ZipFile
 
 
@@ -27,7 +28,7 @@ RAW_COLUMNS = [
     "Preço de Fechamento",
     "Valor Atualizado",
 ]
-OUTPUT_COLUMNS = RAW_COLUMNS + ["evaluation_date"]
+OUTPUT_COLUMNS = RAW_COLUMNS + ["asset_type", "evaluation_date"]
 
 
 def normalize_text(value: str) -> str:
@@ -107,7 +108,12 @@ def load_position_rows(input_path: Path) -> list[dict[str, str]]:
     with ZipFile(input_path) as zf:
         shared_strings = read_shared_strings(zf)
         records = []
-        for target in workbook_sheet_targets(zf):
+        for sheet_index, target in enumerate(workbook_sheet_targets(zf)):
+            asset_type = (
+                AssetType.STOCKS,
+                AssetType.FII,
+                AssetType.TREASURY_BOND,
+            )[sheet_index]
             sheet = ET.fromstring(zf.read(target))
             rows = descendants(sheet, "row")
             if not rows:
@@ -120,6 +126,7 @@ def load_position_rows(input_path: Path) -> list[dict[str, str]]:
             }
             for row in rows[1:]:
                 record = {column: "" for column in RAW_COLUMNS}
+                record["asset_type"] = asset_type.value
                 record["evaluation_date"] = evaluation_date
                 for cell in descendants(row, "c"):
                     header = headers.get(column_index(attribute(cell, "r")))
