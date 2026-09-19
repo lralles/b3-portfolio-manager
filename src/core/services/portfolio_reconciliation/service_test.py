@@ -15,8 +15,12 @@ class StubRepository:
         return self.positions
 
 
-def source_position(asset_id: str | None, quantity: str) -> SourcePosition:
-    return SourcePosition(date(2020, 12, 31), asset_id, "Example Asset", Decimal(quantity))
+def source_position(
+    asset_id: str | None,
+    quantity: str,
+    evaluation_date: date = date(2020, 12, 31),
+) -> SourcePosition:
+    return SourcePosition(evaluation_date, asset_id, "Example Asset", Decimal(quantity))
 
 
 def position(asset_id: str, quantity: str) -> Position:
@@ -24,6 +28,20 @@ def position(asset_id: str, quantity: str) -> Position:
 
 
 class PortfolioReconciliationServiceTests(unittest.TestCase):
+    def test_uses_only_source_positions_from_latest_evaluation_date(self) -> None:
+        result = PortfolioReconciliationService(
+            StubRepository(
+                [
+                    source_position("asset_001", "99", date(2020, 11, 30)),
+                    source_position("asset_001", "2", date(2020, 12, 31)),
+                ]
+            ),
+            StubRepository([position("asset_001", "2")]),
+        ).reconcile()
+
+        self.assertEqual(result.status, "success")
+        self.assertEqual(result.conflicts, [])
+
     def test_success_when_source_and_computed_quantities_match(self) -> None:
         result = PortfolioReconciliationService(
             StubRepository([source_position("asset_001", "2")]),
@@ -57,4 +75,3 @@ class PortfolioReconciliationServiceTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
