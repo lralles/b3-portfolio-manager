@@ -4,6 +4,7 @@ from .position_repository import PositionRepository
 from .transaction_repository import TransactionRepository
 from .source_position_repository import SourcePositionRepository
 from .profit_loss_repository import ProfitLossRepository
+from .trading_price_repository import TradingPriceRepository
 
 __all__ = [
     "HoldingRepository",
@@ -12,4 +13,5 @@ __all__ = [
     "TransactionRepository",
     "SourcePositionRepository",
     "ProfitLossRepository",
+    "TradingPriceRepository",
 ]
