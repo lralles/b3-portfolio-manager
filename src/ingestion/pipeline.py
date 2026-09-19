@@ -42,7 +42,14 @@ def run(
 
     sanitize_transactions(raw_transactions, sanitized_transactions)
     sanitize_source_positions(raw_position, sanitized_positions)
-    ingest_transactions(sanitized_transactions, transactions, assets, holdings, config)
+    ingest_transactions(
+        sanitized_transactions,
+        transactions,
+        assets,
+        holdings,
+        config,
+        trading_prices_path=trading_prices,
+    )
     ingest_source_positions(
         sanitized_positions,
         source_positions,

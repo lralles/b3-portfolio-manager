@@ -3,10 +3,12 @@ from __future__ import annotations
 import csv
 import tempfile
 import unittest
+from datetime import date
 from decimal import Decimal
 from pathlib import Path
 
 from src.core.models.asset import Asset, AssetType
+from src.core.models.trading_price import TradingPrice
 from src.core.repositories.asset_repository import AssetRepository
 from src.core.repositories.trading_price_repository import TradingPriceRepository
 from src.ingestion.steps.step_4_ingest_source_positions import ingest
@@ -124,6 +126,9 @@ class SourcePositionIngestionTests(unittest.TestCase):
                     Asset("fii", "FII", asset_type=AssetType.FII),
                     Asset("bond", "Bond", asset_type=AssetType.TREASURY_BOND),
                 ]
+            )
+            TradingPriceRepository(trading_prices_path).save(
+                [TradingPrice("stock", date(2024, 1, 31), Decimal("999"))]
             )
             fieldnames = [
                 "evaluation_date",

@@ -70,7 +70,19 @@ def ingest(
         )
     asset_service.save(list(assets_by_id.values()))
     SourcePositionService(output_path, config).save(positions)
-    TradingPriceRepository(trading_prices_path, config).save(trading_prices)
+    
+    trading_price_repository = TradingPriceRepository(trading_prices_path, config)
+    existing_prices = (
+        trading_price_repository.all() if trading_prices_path.exists() else []
+    )
+    prices_by_key = {
+        (price.asset_id, price.evaluation_date): price for price in existing_prices
+    }
+    # Position prices are more recent/authoritative than transaction prices.
+    prices_by_key.update(
+        {(price.asset_id, price.evaluation_date): price for price in trading_prices}
+    )
+    trading_price_repository.save(prices_by_key.values())
     return positions
 
 
