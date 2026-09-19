@@ -21,6 +21,7 @@ class Config:
     source_positions_file: Path
     positions_file: Path
     profit_losses_file: Path
+    trading_prices_file: Path
 
     _CONFIG_FILE: ClassVar[Path] = Path(__file__).with_name("config.yaml")
     _PATH_FIELDS: ClassVar[tuple[str, ...]] = (
@@ -36,6 +37,7 @@ class Config:
         "source_positions_file",
         "positions_file",
         "profit_losses_file",
+        "trading_prices_file",
     )
 
     def __init__(self) -> None:

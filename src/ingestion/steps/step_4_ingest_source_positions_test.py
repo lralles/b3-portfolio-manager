@@ -3,10 +3,14 @@ from __future__ import annotations
 import csv
 import tempfile
 import unittest
+from datetime import date
+from decimal import Decimal
 from pathlib import Path
 
 from src.core.models.asset import Asset, AssetType
+from src.core.models.trading_price import TradingPrice
 from src.core.repositories.asset_repository import AssetRepository
+from src.core.repositories.trading_price_repository import TradingPriceRepository
 from src.ingestion.steps.step_4_ingest_source_positions import ingest
 
 
@@ -17,6 +21,7 @@ class SourcePositionIngestionTests(unittest.TestCase):
             assets_path = root / "assets.csv"
             input_path = root / "sanitized_positions.csv"
             output_path = root / "source_positions.csv"
+            trading_prices_path = root / "trading_prices.csv"
             AssetRepository(assets_path).save([Asset("asset_001", "Example Asset")])
             with input_path.open("w", newline="", encoding="utf-8") as fh:
                 writer = csv.DictWriter(
@@ -42,7 +47,12 @@ class SourcePositionIngestionTests(unittest.TestCase):
                     }
                 )
 
-            ingest(input_path, output_path, assets_path)
+            ingest(
+                input_path,
+                output_path,
+                assets_path,
+                trading_prices_path=trading_prices_path,
+            )
 
             self.assertEqual(
                 AssetRepository(assets_path).all(),
@@ -55,6 +65,7 @@ class SourcePositionIngestionTests(unittest.TestCase):
             assets_path = root / "assets.csv"
             input_path = root / "sanitized_positions.csv"
             output_path = root / "source_positions.csv"
+            trading_prices_path = root / "trading_prices.csv"
             AssetRepository(assets_path).save([Asset("asset_001", "Example Asset")])
             with input_path.open("w", newline="", encoding="utf-8") as fh:
                 writer = csv.DictWriter(
@@ -90,13 +101,93 @@ class SourcePositionIngestionTests(unittest.TestCase):
                     ]
                 )
 
-            ingest(input_path, output_path, assets_path)
+            ingest(
+                input_path,
+                output_path,
+                assets_path,
+                trading_prices_path=trading_prices_path,
+            )
 
             self.assertEqual(
                 AssetRepository(assets_path).all(),
                 [Asset("asset_001", "Example Asset", "BR1234567890", AssetType.STOCKS)],
             )
 
+    def test_ingest_extracts_trading_prices_by_asset_type(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            assets_path = root / "assets.csv"
+            input_path = root / "sanitized_positions.csv"
+            output_path = root / "source_positions.csv"
+            trading_prices_path = root / "trading_prices.csv"
+            AssetRepository(assets_path).save(
+                [
+                    Asset("stock", "Stock", asset_type=AssetType.STOCKS),
+                    Asset("fii", "FII", asset_type=AssetType.FII),
+                    Asset("bond", "Bond", asset_type=AssetType.TREASURY_BOND),
+                ]
+            )
+            TradingPriceRepository(trading_prices_path).save(
+                [TradingPrice("stock", date(2024, 1, 31), Decimal("999"))]
+            )
+            fieldnames = [
+                "evaluation_date",
+                "Produto",
+                "Quantidade",
+                "Código ISIN",
+                "Código ISIN / Distribuição",
+                "Preço de Fechamento",
+                "Valor Atualizado",
+                "asset_type",
+            ]
+            with input_path.open("w", newline="", encoding="utf-8") as fh:
+                writer = csv.DictWriter(fh, fieldnames=fieldnames)
+                writer.writeheader()
+                writer.writerows(
+                    [
+                        {
+                            "evaluation_date": "2024-01-31",
+                            "Produto": "Stock",
+                            "Quantidade": "2",
+                            "Preço de Fechamento": "10.50",
+                            "Valor Atualizado": "21",
+                            "asset_type": "stocks",
+                        },
+                        {
+                            "evaluation_date": "2024-01-31",
+                            "Produto": "FII",
+                            "Quantidade": "2",
+                            "Preço de Fechamento": "20.25",
+                            "Valor Atualizado": "40.50",
+                            "asset_type": "fii",
+                        },
+                        {
+                            "evaluation_date": "2024-01-31",
+                            "Produto": "Bond",
+                            "Quantidade": "0.5",
+                            "Preço de Fechamento": "-",
+                            "Valor Atualizado": "100",
+                            "asset_type": "treasury_bond",
+                        },
+                    ]
+                )
+
+            ingest(
+                input_path,
+                output_path,
+                assets_path,
+                trading_prices_path=trading_prices_path,
+            )
+
+            prices = TradingPriceRepository(trading_prices_path).all()
+            self.assertEqual(
+                [(price.asset_id, price.value) for price in prices],
+                [
+                    ("bond", Decimal("200")),
+                    ("fii", Decimal("20.25")),
+                    ("stock", Decimal("10.50")),
+                ],
+            )
 
 if __name__ == "__main__":
     unittest.main()

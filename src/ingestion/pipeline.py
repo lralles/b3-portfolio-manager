@@ -16,6 +16,7 @@ def run(
     raw_position: Path | None = None,
     sanitized_dir: Path | None = None,
     store_dir: Path | None = None,
+    trading_prices: Path | None = None,
 ):
     """Run sanitization, ingestion, and quality checks in dependency order."""
     config = Config()
@@ -33,13 +34,29 @@ def run(
     holdings = store_dir / config.holdings_file.relative_to(config.store_dir)
     transactions = store_dir / config.transactions_file.relative_to(config.store_dir)
     source_positions = store_dir / config.source_positions_file.relative_to(config.store_dir)
+    trading_prices = trading_prices or store_dir / config.trading_prices_file.relative_to(
+        config.store_dir
+    )
     positions = store_dir / config.positions_file.relative_to(config.store_dir)
     profit_losses = store_dir / config.profit_losses_file.relative_to(config.store_dir)
 
     sanitize_transactions(raw_transactions, sanitized_transactions)
     sanitize_source_positions(raw_position, sanitized_positions)
-    ingest_transactions(sanitized_transactions, transactions, assets, holdings, config)
-    ingest_source_positions(sanitized_positions, source_positions, assets, config)
+    ingest_transactions(
+        sanitized_transactions,
+        transactions,
+        assets,
+        holdings,
+        config,
+        trading_prices_path=trading_prices,
+    )
+    ingest_source_positions(
+        sanitized_positions,
+        source_positions,
+        assets,
+        config,
+        trading_prices_path=trading_prices,
+    )
     status = reconcile(transactions, positions, assets, source_positions, profit_losses, config)
     if status.status != "success":
         raise ValueError(f"Position reconciliation failed: {status.conflicts}")

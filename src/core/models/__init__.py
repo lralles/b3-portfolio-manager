@@ -4,6 +4,7 @@ from .position import Position
 from .transaction import IOFlow, Transaction, TransactionOperationType
 from .source_position import SourcePosition
 from .profit_loss import ProfitLoss, ProfitLossType
+from .trading_price import TradingPrice
 
 __all__ = [
     "Holding",
@@ -15,4 +16,5 @@ __all__ = [
     "SourcePosition",
     "ProfitLoss",
     "ProfitLossType",
+    "TradingPrice",
 ]

@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import argparse
 import csv
+from datetime import date
 from pathlib import Path
 
 from config import Config
 from src.core.models.asset import Asset
 from src.core.models.holding import Holding
-from src.core.models.transaction import Transaction
+from src.core.models.transaction import Transaction, TransactionOperationType
+from src.core.models.trading_price import TradingPrice
+from src.core.repositories.trading_price_repository import TradingPriceRepository
 from src.core.services.asset_service import AssetService
 from src.core.services.holding_service import HoldingService
 from src.core.services.transaction_service import TransactionService
@@ -24,8 +27,10 @@ def ingest(
     assets_path: Path,
     holdings_path: Path,
     config: Config | None = None,
+    trading_prices_path: Path | None = None,
 ) -> list[Transaction]:
     config = config or Config()
+    trading_prices_path = trading_prices_path or config.trading_prices_file
     with input_path.open(newline="", encoding="utf-8") as fh:
         rows = list(csv.DictReader(fh))
 
@@ -55,7 +60,36 @@ def ingest(
         for index, row in enumerate(rows, start=1)
     ]
     TransactionService(output_path, config).save(transactions)
+
+    _save_transaction_trading_prices(transactions, trading_prices_path, config)
     return transactions
+
+
+def _save_transaction_trading_prices(
+    transactions: list[Transaction],
+    trading_prices_path: Path,
+    config: Config,
+) -> None:
+    prices_by_key: dict[tuple[str, date], TradingPrice] = {}
+    for transaction in transactions:
+        if transaction.operation_type not in (
+            TransactionOperationType.PURCHASE,
+            TransactionOperationType.SALE,
+        ) or transaction.unit_price is None:
+            continue
+        key = (transaction.asset_id, transaction.date)
+        # Multiple trades on the same asset/date are equivalent for this store;
+        # retain the first one encountered.
+        prices_by_key.setdefault(
+            key,
+            TradingPrice(
+                asset_id=transaction.asset_id,
+                evaluation_date=transaction.date,
+                value=transaction.unit_price,
+            ),
+        )
+
+    TradingPriceRepository(trading_prices_path, config).save(prices_by_key.values())
 
 
 def main() -> int:
@@ -65,8 +99,17 @@ def main() -> int:
     parser.add_argument("--output", type=Path, default=config.transactions_file)
     parser.add_argument("--assets", type=Path, default=config.assets_file)
     parser.add_argument("--holdings", type=Path, default=config.holdings_file)
+    parser.add_argument(
+        "--trading-prices", type=Path, default=config.trading_prices_file
+    )
     args = parser.parse_args()
-    transactions = ingest(args.input, args.output, args.assets, args.holdings)
+    transactions = ingest(
+        args.input,
+        args.output,
+        args.assets,
+        args.holdings,
+        trading_prices_path=args.trading_prices,
+    )
     print(
         f"Wrote {len(transactions)} transactions, assets, and holdings "
         f"to {args.output.parent.parent}"
