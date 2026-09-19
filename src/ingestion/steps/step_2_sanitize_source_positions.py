@@ -145,11 +145,13 @@ def load_position_rows(input_path: Path) -> list[dict[str, str]]:
 
 def main() -> int:
     config = Config()
-    parser = argparse.ArgumentParser(description="Sanitize one B3 position XLSX into CSV.")
+    parser = argparse.ArgumentParser(
+        description="Sanitize B3 position XLSX files into one CSV."
+    )
     parser.add_argument(
         "--input", type=Path,
         default=config.raw_position_file,
-        help="The single raw B3 position XLSX to ingest.",
+        help="Directory containing raw B3 position XLSX files.",
     )
     parser.add_argument(
         "--output", type=Path,
@@ -162,7 +164,19 @@ def main() -> int:
 
 
 def sanitize(input_path: Path, output: Path) -> int:
-    records = load_position_rows(input_path)
+    input_files = (
+        sorted(input_path.rglob("*.xlsx"))
+        if input_path.is_dir()
+        else [input_path]
+    )
+    if not input_files:
+        raise FileNotFoundError(f"No XLSX files found under {input_path}")
+
+    records: list[dict[str, str]] = []
+    for position_file in input_files:
+        records.extend(load_position_rows(position_file))
+    records.sort(key=lambda record: record["evaluation_date"])
+
     output.parent.mkdir(parents=True, exist_ok=True)
     with output.open("w", newline="", encoding="utf-8") as fh:
         writer = csv.DictWriter(fh, fieldnames=OUTPUT_COLUMNS)

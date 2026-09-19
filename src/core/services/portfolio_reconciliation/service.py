@@ -28,7 +28,18 @@ class PortfolioReconciliationService:
         }
         conflicts = []
 
-        for source_position in self.source_position_repository.all():
+        source_positions = self.source_position_repository.all()
+        latest_evaluation_date = max(
+            (source_position.evaluation_date for source_position in source_positions),
+            default=None,
+        )
+        latest_source_positions = (
+            source_position
+            for source_position in source_positions
+            if source_position.evaluation_date == latest_evaluation_date
+        )
+
+        for source_position in latest_source_positions:
             position = (
                 computed_positions.get(source_position.asset_id)
                 if source_position.asset_id is not None

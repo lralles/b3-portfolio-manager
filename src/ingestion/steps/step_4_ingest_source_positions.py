@@ -5,6 +5,7 @@ import csv
 import re
 import unicodedata
 from dataclasses import replace
+from datetime import date
 from pathlib import Path
 
 from config import Config
@@ -29,9 +30,13 @@ def ingest(
     config = config or Config()
     with input_path.open(newline="", encoding="utf-8") as fh:
         rows = list(csv.DictReader(fh))
+    rows.sort(key=lambda row: date.fromisoformat(row["evaluation_date"].strip()))
+
     asset_service = AssetService(assets_path, config)
+    assets = asset_service.all()
+    assets_by_id = {asset.asset_id: asset for asset in assets}
     lookup: dict[str, Asset] = {}
-    for asset in asset_service.all():
+    for asset in assets:
         lookup[normalized(asset.asset_name)] = asset
         lookup.setdefault(normalized(asset.asset_name.split(" - ", 1)[0]), asset)
     positions = []
@@ -39,23 +44,26 @@ def ingest(
         asset = lookup.get(normalized(row["Produto"])) or lookup.get(
             normalized(row["Produto"].split(" - ", 1)[0])
         )
+        if asset:
+            asset = assets_by_id[asset.asset_id]
         isin = row.get("Código ISIN", "").strip()
         asset_type_value = row.get("asset_type", "").strip()
-        if asset and (isin or asset_type_value):
-            asset_service.update(
-                replace(
-                    asset,
-                    isin=isin or asset.isin,
-                    asset_type=(
-                        AssetType(asset_type_value)
-                        if asset_type_value
-                        else asset.asset_type
-                    ),
-                )
+        if asset:
+            enriched_asset = replace(
+                asset,
+                isin=asset.isin or isin,
+                asset_type=(
+                    asset.asset_type
+                    or AssetType(asset_type_value)
+                    if asset_type_value
+                    else asset.asset_type
+                ),
             )
+            assets_by_id[asset.asset_id] = enriched_asset
         positions.append(
             source_position_from_sanitized_row(row, asset.asset_id if asset else None)
         )
+    asset_service.save(list(assets_by_id.values()))
     SourcePositionService(output_path, config).save(positions)
     return positions
 
