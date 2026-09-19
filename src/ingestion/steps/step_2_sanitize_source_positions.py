@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import csv
 import re
+import unicodedata
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -69,22 +70,47 @@ def read_shared_strings(zf: ZipFile) -> list[str]:
 
 
 def workbook_sheet_target(zf: ZipFile) -> str:
-    return workbook_sheet_targets(zf)[0]
+    return workbook_sheets(zf)[0][1]
 
 
 def workbook_sheet_targets(zf: ZipFile) -> list[str]:
+    return [target for _, target in workbook_sheets(zf)]
+
+
+def workbook_sheets(zf: ZipFile) -> list[tuple[str, str]]:
     workbook = ET.fromstring(zf.read("xl/workbook.xml"))
     relationships = ET.fromstring(zf.read("xl/_rels/workbook.xml.rels"))
-    targets = []
+    sheets = []
     for sheet in descendants(workbook, "sheet"):
+        sheet_name = attribute(sheet, "name")
         relationship_id = attribute(sheet, "id")
         for relationship in descendants(relationships, "Relationship"):
             if attribute(relationship, "Id") == relationship_id:
-                targets.append(f"xl/{attribute(relationship, 'Target').lstrip('/')}")
+                target = f"xl/{attribute(relationship, 'Target').lstrip('/')}"
+                sheets.append((sheet_name, target))
                 break
         else:
             raise ValueError(f"Could not resolve worksheet target for {relationship_id}")
-    return targets
+    return sheets
+
+
+def asset_type_from_sheet_name(sheet_name: str) -> AssetType:
+    normalized_name = unicodedata.normalize("NFKD", sheet_name)
+    normalized_name = "".join(
+        char for char in normalized_name if not unicodedata.combining(char)
+    ).casefold()
+    normalized_name = re.sub(r"\s+", " ", normalized_name).strip()
+
+    asset_types = {
+        "acoes": AssetType.STOCKS,
+        "ações": AssetType.STOCKS,
+        "fundo de investimento": AssetType.FII,
+        "tesouro direto": AssetType.TREASURY_BOND,
+    }
+    try:
+        return asset_types[normalized_name]
+    except KeyError as exc:
+        raise ValueError(f"Unsupported B3 position worksheet: {sheet_name!r}") from exc
 
 
 def cell_value(cell: ET.Element, shared_strings: list[str]) -> str:
@@ -108,12 +134,8 @@ def load_position_rows(input_path: Path) -> list[dict[str, str]]:
     with ZipFile(input_path) as zf:
         shared_strings = read_shared_strings(zf)
         records = []
-        for sheet_index, target in enumerate(workbook_sheet_targets(zf)):
-            asset_type = (
-                AssetType.STOCKS,
-                AssetType.FII,
-                AssetType.TREASURY_BOND,
-            )[sheet_index]
+        for sheet_name, target in workbook_sheets(zf):
+            asset_type = asset_type_from_sheet_name(sheet_name)
             sheet = ET.fromstring(zf.read(target))
             rows = descendants(sheet, "row")
             if not rows:
