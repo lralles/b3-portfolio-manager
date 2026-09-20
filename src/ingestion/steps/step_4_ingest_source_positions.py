@@ -89,7 +89,7 @@ def ingest(
 def _trading_price_from_row(
     row: dict[str, str], asset_id: str, asset_type: AssetType | None
 ) -> TradingPrice | None:
-    if asset_type in (AssetType.STOCKS, AssetType.FII):
+    if asset_type in (AssetType.STOCKS, AssetType.FII, AssetType.ETF):
         if "Preço de Fechamento" not in row:
             return None
         value = _parse_decimal(row.get("Preço de Fechamento", ""))

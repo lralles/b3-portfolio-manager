@@ -105,6 +105,7 @@ def asset_type_from_sheet_name(sheet_name: str) -> AssetType:
         "acoes": AssetType.STOCKS,
         "ações": AssetType.STOCKS,
         "fundo de investimento": AssetType.FII,
+        "etf": AssetType.ETF,
         "tesouro direto": AssetType.TREASURY_BOND,
     }
     try:

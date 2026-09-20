@@ -7,6 +7,7 @@ from enum import Enum
 class AssetType(str, Enum):
     STOCKS = "stocks"
     FII = "fii"
+    ETF = "etf"
     TREASURY_BOND = "treasury_bond"
 
 
