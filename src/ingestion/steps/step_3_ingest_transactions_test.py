@@ -7,10 +7,16 @@ from decimal import Decimal
 from pathlib import Path
 
 from src.core.repositories.trading_price_repository import TradingPriceRepository
-from src.ingestion.steps.step_3_ingest_transactions import ingest
+from src.ingestion.steps.step_3_ingest_transactions import asset_key, ingest
 
 
 class TransactionIngestionTests(unittest.TestCase):
+    def test_asset_key_uses_ticker_for_b3_product_names(self) -> None:
+        self.assertEqual(
+            asset_key("B3SA3 - B3 S.A. – BRASIL, BOLSA, BALCÃO"), "B3SA3"
+        )
+        self.assertEqual(asset_key("Tesouro IPCA+ 2026"), "Tesouro IPCA+ 2026")
+
     def test_extracts_one_price_per_asset_and_date_from_buys_and_sells(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

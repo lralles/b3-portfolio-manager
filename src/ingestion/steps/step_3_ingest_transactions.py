@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import re
 from datetime import date
 from pathlib import Path
 
@@ -21,6 +22,12 @@ def reference_id(prefix: str, name: str, names: list[str]) -> str:
     return f"{prefix}_{names.index(name) + 1:03d}"
 
 
+def asset_key(name: str) -> str:
+    """Use the B3 ticker to identify products with varying descriptions."""
+    match = re.match(r"^([A-Z0-9]{4,6})\s+-\s+", name.strip())
+    return match.group(1) if match else name.strip()
+
+
 def ingest(
     input_path: Path,
     output_path: Path,
@@ -34,7 +41,11 @@ def ingest(
     with input_path.open(newline="", encoding="utf-8") as fh:
         rows = list(csv.DictReader(fh))
 
-    asset_names = sorted({row["produto"].strip() for row in rows})
+    names_by_key: dict[str, list[str]] = {}
+    for row in rows:
+        name = row["produto"].strip()
+        names_by_key.setdefault(asset_key(name), []).append(name)
+    asset_names = sorted(min(names) for names in names_by_key.values())
     holding_names = sorted({row["instituicao"].strip() for row in rows})
     asset_models = [
         Asset(reference_id("asset", name, asset_names), name)
@@ -48,13 +59,13 @@ def ingest(
     # required by the canonical transaction model.
     AssetService(assets_path, config).save(asset_models)
     HoldingService(holdings_path, config).save(holding_models)
-    assets = {asset.asset_name: asset for asset in asset_models}
+    assets = {asset_key(asset.asset_name): asset for asset in asset_models}
     holdings = {holding.holding_name: holding for holding in holding_models}
     transactions = [
         transaction_from_sanitized_row(
             row,
             transaction_id=f"transaction_{index:03d}",
-            asset_id=assets[row["produto"].strip()].asset_id,
+            asset_id=assets[asset_key(row["produto"])].asset_id,
             holding_id=holdings[row["instituicao"].strip()].holding_id,
         )
         for index, row in enumerate(rows, start=1)
