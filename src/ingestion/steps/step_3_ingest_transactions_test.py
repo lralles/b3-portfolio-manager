@@ -7,10 +7,57 @@ from decimal import Decimal
 from pathlib import Path
 
 from src.core.repositories.trading_price_repository import TradingPriceRepository
-from src.ingestion.steps.step_3_ingest_transactions import ingest
+from src.ingestion.steps.step_3_ingest_transactions import (
+    asset_key,
+    normalize_transferred_income_rows,
+    ingest,
+)
 
 
 class TransactionIngestionTests(unittest.TestCase):
+    def test_transferred_income_pairs_become_one_credited_event(self) -> None:
+        row = {
+            "entrada_saida": "Debito",
+            "data": "2021-05-14",
+            "movimentacao": "Dividendo - Transferido",
+            "produto": "ASSET - Example",
+            "instituicao": "Rico",
+            "quantidade": "4",
+            "preco_unitario": "0.10",
+            "valor_operacao": "0.42",
+        }
+        credit = dict(row)
+        credit["entrada_saida"] = "Credito"
+        credit["instituicao"] = "XP"
+
+        normalized = normalize_transferred_income_rows([row, credit])
+
+        self.assertEqual(len(normalized), 1)
+        self.assertEqual(normalized[0]["entrada_saida"], "Credito")
+        self.assertEqual(normalized[0]["movimentacao"], "dividendo")
+        self.assertEqual(normalized[0]["instituicao"], "XP")
+
+    def test_transferred_income_requires_balanced_pairs(self) -> None:
+        row = {
+            "entrada_saida": "Debito",
+            "data": "2021-05-14",
+            "movimentacao": "Juros Sobre Capital Próprio - Transferido",
+            "produto": "ASSET - Example",
+            "instituicao": "Rico",
+            "quantidade": "4",
+            "preco_unitario": "0.10",
+            "valor_operacao": "0.42",
+        }
+
+        with self.assertRaisesRegex(ValueError, "matching debit and credit"):
+            normalize_transferred_income_rows([row])
+
+    def test_asset_key_uses_ticker_for_b3_product_names(self) -> None:
+        self.assertEqual(
+            asset_key("B3SA3 - B3 S.A. – BRASIL, BOLSA, BALCÃO"), "B3SA3"
+        )
+        self.assertEqual(asset_key("Tesouro IPCA+ 2026"), "Tesouro IPCA+ 2026")
+
     def test_extracts_one_price_per_asset_and_date_from_buys_and_sells(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

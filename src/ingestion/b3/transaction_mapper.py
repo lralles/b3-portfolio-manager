@@ -18,20 +18,27 @@ SOURCE_IO_FLOW_MAP = {
 
 SOURCE_OPERATION_TYPE_MAP = {
     "compra": TransactionOperationType.PURCHASE,
+    "bonificação em ativos": TransactionOperationType.ASSET_BONUS,
+    "desdobro": TransactionOperationType.ASSET_SPLIT,
     "dividendo": TransactionOperationType.DIVIDEND,
+    "dividendo - transferido": TransactionOperationType.DIVIDEND,
     "juros sobre capital próprio": TransactionOperationType.INTEREST_ON_EQUITY,
+    "juros sobre capital próprio - transferido": TransactionOperationType.INTEREST_ON_EQUITY,
     "rendimento": TransactionOperationType.INCOME,
+    "direito de subscrição": TransactionOperationType.SUBSCRIPTION_RIGHT_GRANT,
     "transferência": TransactionOperationType.TRANSFER,
+    "cessão de direitos": TransactionOperationType.RIGHTS_TRANSFER,
+    "cessão de direitos - solicitada": TransactionOperationType.SUBSCRIPTION_RIGHT_DISPOSAL,
+    "evento em dinheiro - transferido": TransactionOperationType.CASH_EVENT_TRANSFER,
     "venda": TransactionOperationType.SALE,
+    "direitos de subscrição - não exercido": TransactionOperationType.SUBSCRIPTION_RIGHT_EXPIRY,
+    "leilão de fração": TransactionOperationType.FRACTION_AUCTION,
+    "incorporação": TransactionOperationType.INCORPORATION,
+    "resgate": TransactionOperationType.REDEMPTION,
+    "fração em ativos": TransactionOperationType.FRACTION_SETTLEMENT,
 }
 
 SOURCE_SETTLEMENT_TRANSFER = "transferência - liquidação"
-
-OPERATION_TYPES_WITH_OUTFLOW = {
-    TransactionOperationType.DIVIDEND,
-    TransactionOperationType.INTEREST_ON_EQUITY,
-}
-
 
 def transaction_from_sanitized_row(
     row: Mapping[str, str], transaction_id: str, asset_id: str, holding_id: str
@@ -62,9 +69,6 @@ def transaction_from_sanitized_row(
             raise ValueError(
                 f"Unknown transaction operation type: {operation_value!r}"
             ) from exc
-
-    if operation_type in OPERATION_TYPES_WITH_OUTFLOW:
-        io_flow = IOFlow.OUTFLOW
 
     try:
         transaction_date = date.fromisoformat(date_value)

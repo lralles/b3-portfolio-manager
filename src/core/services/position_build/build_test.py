@@ -34,6 +34,82 @@ def transaction(
 
 
 class BuildPositionsTests(unittest.TestCase):
+    def test_incorporation_transfers_basis_and_redemption_reduces_it(self) -> None:
+        source = Transaction(
+            transaction_id="purchase_hgtx",
+            io_flow=IOFlow.INFLOW,
+            date=date(2021, 1, 13),
+            operation_type=TransactionOperationType.PURCHASE,
+            asset_id="hgtx",
+            holding_id="holding_001",
+            quantity=Decimal("4"),
+            unit_price=Decimal("15.86"),
+            operation_value=Decimal("63.44"),
+        )
+        incorporation_out = Transaction(
+            transaction_id="incorporation_out",
+            io_flow=IOFlow.OUTFLOW,
+            date=date(2021, 9, 21),
+            operation_type=TransactionOperationType.INCORPORATION,
+            asset_id="hgtx",
+            holding_id="holding_001",
+            quantity=Decimal("4"),
+            unit_price=None,
+            operation_value=None,
+            corporate_action_id="hgtx_to_soma",
+            corporate_action_related_asset_id="soma",
+        )
+        incorporation_in = Transaction(
+            transaction_id="incorporation_in",
+            io_flow=IOFlow.INFLOW,
+            date=date(2021, 9, 21),
+            operation_type=TransactionOperationType.INCORPORATION,
+            asset_id="soma",
+            holding_id="holding_001",
+            quantity=Decimal("6.5"),
+            unit_price=None,
+            operation_value=None,
+            corporate_action_id="hgtx_to_soma",
+            corporate_action_related_asset_id="hgtx",
+        )
+        redemption = Transaction(
+            transaction_id="redemption_cmrv",
+            io_flow=IOFlow.INFLOW,
+            date=date(2021, 9, 24),
+            operation_type=TransactionOperationType.REDEMPTION,
+            asset_id="cmrv11",
+            holding_id="holding_001",
+            quantity=None,
+            unit_price=None,
+            operation_value=Decimal("38.15"),
+            corporate_action_id="hgtx_to_soma",
+            corporate_action_related_asset_id="soma",
+        )
+        fraction = Transaction(
+            transaction_id="fraction_soma",
+            io_flow=IOFlow.OUTFLOW,
+            date=date(2021, 10, 4),
+            operation_type=TransactionOperationType.FRACTION_SETTLEMENT,
+            asset_id="soma",
+            holding_id="holding_001",
+            quantity=None,
+            unit_price=None,
+            operation_value=None,
+            corporate_action_id="hgtx_to_soma",
+        )
+
+        positions, profit_losses = build_positions(
+            [source, incorporation_out, incorporation_in, redemption, fraction]
+        )
+
+        by_asset = {position.asset_id: position for position in positions}
+        self.assertEqual(by_asset["hgtx"].current_quantity, Decimal("0"))
+        self.assertEqual(by_asset["hgtx"].invested_capital, Decimal("0"))
+        self.assertEqual(by_asset["soma"].current_quantity, Decimal("6"))
+        self.assertEqual(by_asset["soma"].invested_capital, Decimal("25.29"))
+        self.assertNotIn("cmrv11", by_asset)
+        self.assertEqual(profit_losses, [])
+
     def test_purchase_accumulates_quantity_and_capital(self) -> None:
         positions, profit_losses = build_positions([
             transaction(TransactionOperationType.PURCHASE, quantity="2", operation_value="20"),

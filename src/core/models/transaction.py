@@ -19,6 +19,17 @@ class TransactionOperationType(StrEnum):
     INCOME = "income"
     TRANSFER = "transfer"
     SALE = "sale"
+    INCORPORATION = "incorporation"
+    REDEMPTION = "redemption"
+    FRACTION_SETTLEMENT = "fraction_settlement"
+    ASSET_BONUS = "asset_bonus"
+    ASSET_SPLIT = "asset_split"
+    SUBSCRIPTION_RIGHT_GRANT = "subscription_right_grant"
+    SUBSCRIPTION_RIGHT_EXPIRY = "subscription_right_expiry"
+    SUBSCRIPTION_RIGHT_DISPOSAL = "subscription_right_disposal"
+    RIGHTS_TRANSFER = "rights_transfer"
+    FRACTION_AUCTION = "fraction_auction"
+    CASH_EVENT_TRANSFER = "cash_event_transfer"
 
 
 def parse_decimal(value: str) -> Decimal | None:
@@ -42,6 +53,8 @@ class Transaction:
     quantity: Decimal | None
     unit_price: Decimal | None
     operation_value: Decimal | None
+    corporate_action_id: str | None = None
+    corporate_action_related_asset_id: str | None = None
 
     @classmethod
     def from_store_row(cls, row: Mapping[str, str]) -> Transaction:
@@ -78,4 +91,9 @@ class Transaction:
             quantity=parse_decimal(row["quantity"]),
             unit_price=parse_decimal(row["unit_price"]),
             operation_value=parse_decimal(row["operation_value"]),
+            corporate_action_id=row.get("corporate_action_id", "").strip() or None,
+            corporate_action_related_asset_id=row.get(
+                "corporate_action_related_asset_id", ""
+            ).strip()
+            or None,
         )
