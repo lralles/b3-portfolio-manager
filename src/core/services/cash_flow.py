@@ -5,7 +5,20 @@ from datetime import date
 from decimal import Decimal
 from typing import Iterable
 
-from ..models.transaction import IOFlow, Transaction
+from ..models.transaction import IOFlow, Transaction, TransactionOperationType
+
+
+# These operations realize value from the investment position.  Their source
+# direction can be ``credito`` in the B3 export, but they are still position
+# outflows: the asset/value is leaving the position.
+POSITION_OUTFLOW_OPERATION_TYPES = {
+    TransactionOperationType.DIVIDEND,
+    TransactionOperationType.INTEREST_ON_EQUITY,
+    TransactionOperationType.INCOME,
+    TransactionOperationType.SALE,
+    TransactionOperationType.REDEMPTION,
+    TransactionOperationType.FRACTION_AUCTION,
+}
 
 
 @dataclass(frozen=True, slots=True)
@@ -40,7 +53,10 @@ def calculate_monthly_cash_flow(
         if value is None:
             continue
 
-        if transaction.io_flow is IOFlow.INFLOW:
+        if (
+            transaction.operation_type not in POSITION_OUTFLOW_OPERATION_TYPES
+            and transaction.io_flow is IOFlow.INFLOW
+        ):
             totals[month][0] += value
         else:
             totals[month][1] += value

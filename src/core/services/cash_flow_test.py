@@ -13,12 +13,13 @@ def transaction(
     *,
     io_flow: IOFlow,
     operation_value: str | None,
+    operation_type: TransactionOperationType = TransactionOperationType.PURCHASE,
 ) -> Transaction:
     return Transaction(
         transaction_id="transaction_001",
         io_flow=io_flow,
         date=transaction_date,
-        operation_type=TransactionOperationType.PURCHASE,
+        operation_type=operation_type,
         asset_id="asset_001",
         holding_id="holding_001",
         quantity=None,
@@ -70,6 +71,26 @@ class CashFlowTests(unittest.TestCase):
         self.assertEqual(result, [
             MonthlyCashFlow(date(2020, 1, 1), Decimal("0"), Decimal("0"), Decimal("0"), 1)
         ])
+
+    def test_realized_value_is_position_outflow_even_when_credited(self) -> None:
+        result = calculate_monthly_cash_flow([
+            transaction(
+                date(2020, 1, 1),
+                io_flow=IOFlow.INFLOW,
+                operation_value="12.50",
+                operation_type=TransactionOperationType.DIVIDEND,
+            ),
+            transaction(
+                date(2020, 1, 2),
+                io_flow=IOFlow.INFLOW,
+                operation_value="100",
+                operation_type=TransactionOperationType.SALE,
+            ),
+        ])
+
+        self.assertEqual(result[0].inflow, Decimal("0"))
+        self.assertEqual(result[0].outflow, Decimal("112.50"))
+        self.assertEqual(result[0].net, Decimal("-112.50"))
 
     def test_next_month_rolls_over_year(self) -> None:
         self.assertEqual(next_month(date(2020, 12, 1)), date(2021, 1, 1))
