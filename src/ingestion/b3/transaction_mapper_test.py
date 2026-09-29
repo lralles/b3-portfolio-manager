@@ -18,6 +18,28 @@ def sanitized_row(direction: str) -> dict[str, str]:
 
 
 class TransactionMapperTests(unittest.TestCase):
+    def test_buy_sell_credit_is_mapped_to_purchase(self) -> None:
+        row = sanitized_row("credito")
+        row["movimentacao"] = "Compra / Venda"
+
+        transaction = transaction_from_sanitized_row(
+            row, "transaction_001", "asset_001", "holding_001"
+        )
+
+        self.assertEqual(transaction.io_flow, IOFlow.INFLOW)
+        self.assertEqual(transaction.operation_type, TransactionOperationType.PURCHASE)
+
+    def test_buy_sell_debit_is_mapped_to_sale(self) -> None:
+        row = sanitized_row("debito")
+        row["movimentacao"] = "Compra / Venda"
+
+        transaction = transaction_from_sanitized_row(
+            row, "transaction_001", "asset_001", "holding_001"
+        )
+
+        self.assertEqual(transaction.io_flow, IOFlow.OUTFLOW)
+        self.assertEqual(transaction.operation_type, TransactionOperationType.SALE)
+
     def test_settlement_credit_is_mapped_to_purchase(self) -> None:
         transaction = transaction_from_sanitized_row(
             sanitized_row("credito"), "transaction_001", "asset_001", "holding_001"

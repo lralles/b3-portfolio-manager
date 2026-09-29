@@ -39,6 +39,7 @@ SOURCE_OPERATION_TYPE_MAP = {
 }
 
 SOURCE_SETTLEMENT_TRANSFER = "transferência - liquidação"
+SOURCE_BUY_SELL = "compra / venda"
 
 def transaction_from_sanitized_row(
     row: Mapping[str, str], transaction_id: str, asset_id: str, holding_id: str
@@ -56,7 +57,7 @@ def transaction_from_sanitized_row(
     except KeyError as exc:
         raise ValueError(f"Unknown transaction direction: {direction_value!r}") from exc
 
-    if operation_value == SOURCE_SETTLEMENT_TRANSFER:
+    if operation_value in (SOURCE_SETTLEMENT_TRANSFER, SOURCE_BUY_SELL):
         operation_type = (
             TransactionOperationType.PURCHASE
             if io_flow is IOFlow.INFLOW
