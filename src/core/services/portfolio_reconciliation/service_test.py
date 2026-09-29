@@ -72,6 +72,27 @@ class PortfolioReconciliationServiceTests(unittest.TestCase):
         self.assertIsNone(result.conflicts[0].position)
         self.assertEqual(result.conflicts[0].source_position, source)
 
+    def test_reports_non_zero_computed_position_missing_from_source(self) -> None:
+        source = source_position("asset_001", "2")
+        computed = position("asset_002", "3")
+        result = PortfolioReconciliationService(
+            StubRepository([source]), StubRepository([position("asset_001", "2"), computed])
+        ).reconcile()
+
+        self.assertEqual(result.status, "error")
+        self.assertEqual(result.conflicts[0].position, computed)
+        self.assertEqual(result.conflicts[0].source_position.asset_id, "asset_002")
+        self.assertEqual(result.conflicts[0].source_position.quantity, Decimal("0"))
+
+    def test_ignores_zero_quantity_computed_history_missing_from_source(self) -> None:
+        result = PortfolioReconciliationService(
+            StubRepository([source_position("asset_001", "2")]),
+            StubRepository([position("asset_001", "2"), position("asset_002", "0")]),
+        ).reconcile()
+
+        self.assertEqual(result.status, "success")
+        self.assertEqual(result.conflicts, [])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from decimal import Decimal
+
 from config import Config
+from ...models.source_position import SourcePosition
 from ..position_service import PositionService
 from ..source_position_service import SourcePositionService
 from .position_conflict import PositionConflict
@@ -33,11 +36,16 @@ class PortfolioReconciliationService:
             (source_position.evaluation_date for source_position in source_positions),
             default=None,
         )
-        latest_source_positions = (
+        latest_source_positions = list(
             source_position
             for source_position in source_positions
             if source_position.evaluation_date == latest_evaluation_date
         )
+        source_positions_by_asset = {
+            source_position.asset_id: source_position
+            for source_position in latest_source_positions
+            if source_position.asset_id is not None
+        }
 
         for source_position in latest_source_positions:
             position = (
@@ -47,6 +55,23 @@ class PortfolioReconciliationService:
             )
             if position is None or position.current_quantity != source_position.quantity:
                 conflicts.append(PositionConflict(position, source_position))
+
+        if latest_evaluation_date is not None:
+            for asset_id, position in computed_positions.items():
+                if position.current_quantity == 0 or asset_id in source_positions_by_asset:
+                    continue
+                asset_name = position.asset.asset_name if position.asset else ""
+                conflicts.append(
+                    PositionConflict(
+                        position,
+                        SourcePosition(
+                            evaluation_date=latest_evaluation_date,
+                            asset_id=asset_id,
+                            asset_name=asset_name,
+                            quantity=Decimal("0"),
+                        ),
+                    )
+                )
 
         return PortfolioReconciliationStatus(
             status="error" if conflicts else "success",
