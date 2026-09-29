@@ -66,3 +66,10 @@ class CustodyTransferHandler:
 class IgnoredTransactionHandler:
     def apply(self, position: PositionAccumulator, transaction: Transaction) -> None:
         return None
+
+
+class CorporateActionHandler:
+    """Marker handler for operations applied by the position builder."""
+
+    def apply(self, position: PositionAccumulator, transaction: Transaction) -> None:
+        return None

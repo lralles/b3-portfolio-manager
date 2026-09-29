@@ -19,6 +19,8 @@ TRANSACTION_COLUMNS = [
     "quantity",
     "unit_price",
     "operation_value",
+    "corporate_action_id",
+    "corporate_action_related_asset_id",
 ]
 
 
@@ -52,6 +54,10 @@ def _to_store_row(transaction: Transaction) -> dict[str, str]:
         "quantity": _format_decimal(transaction.quantity),
         "unit_price": _format_decimal(transaction.unit_price),
         "operation_value": _format_decimal(transaction.operation_value),
+        "corporate_action_id": transaction.corporate_action_id or "",
+        "corporate_action_related_asset_id": (
+            transaction.corporate_action_related_asset_id or ""
+        ),
     }
 
 

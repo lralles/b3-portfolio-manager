@@ -16,6 +16,7 @@ from src.core.services.asset_service import AssetService
 from src.core.services.holding_service import HoldingService
 from src.core.services.transaction_service import TransactionService
 from src.ingestion.b3.transaction_mapper import transaction_from_sanitized_row
+from src.ingestion.custom_operations import CorporateAction, load, transactions_for
 
 
 def reference_id(prefix: str, name: str, names: list[str]) -> str:
@@ -35,16 +36,29 @@ def ingest(
     holdings_path: Path,
     config: Config | None = None,
     trading_prices_path: Path | None = None,
+    custom_operations_path: Path | None = None,
 ) -> list[Transaction]:
     config = config or Config()
     trading_prices_path = trading_prices_path or config.trading_prices_file
+    custom_operations_path = custom_operations_path or (
+        input_path.parent.parent / "custom_operations" / "corporate_actions.csv"
+    )
     with input_path.open(newline="", encoding="utf-8") as fh:
         rows = list(csv.DictReader(fh))
+    corporate_actions = load(custom_operations_path)
+    rows = [row for row in rows if not _is_replaced_by_custom_action(row, corporate_actions)]
 
     names_by_key: dict[str, list[str]] = {}
     for row in rows:
         name = row["produto"].strip()
         names_by_key.setdefault(asset_key(name), []).append(name)
+    for action in corporate_actions:
+        for name in (
+            action.source_product,
+            action.target_product,
+            action.redemption_product,
+        ):
+            names_by_key.setdefault(asset_key(name), []).append(name)
     asset_names = sorted(min(names) for names in names_by_key.values())
     holding_names = sorted({row["instituicao"].strip() for row in rows})
     asset_models = [
@@ -70,10 +84,44 @@ def ingest(
         )
         for index, row in enumerate(rows, start=1)
     ]
+    next_transaction_number = len(transactions) + 1
+    for action in corporate_actions:
+        action_transactions = transactions_for(
+            action,
+            assets,
+            holdings,
+            next_transaction_number,
+        )
+        transactions.extend(action_transactions)
+        next_transaction_number += len(action_transactions)
     TransactionService(output_path, config).save(transactions)
 
     _save_transaction_trading_prices(transactions, trading_prices_path, config)
     return transactions
+
+
+def _is_replaced_by_custom_action(
+    row: dict[str, str], corporate_actions: list[CorporateAction]
+) -> bool:
+    operation = row["movimentacao"].strip().lower()
+    row_date = row["data"].strip()
+    row_asset = asset_key(row["produto"])
+    for action in corporate_actions:
+        if operation == "incorporação" and row_date == action.date.isoformat():
+            return True
+        if (
+            operation == "resgate"
+            and row_date == action.redemption_date.isoformat()
+            and row_asset == asset_key(action.redemption_product)
+        ):
+            return True
+        if (
+            operation == "fração em ativos"
+            and row_date == action.fraction_settlement_date.isoformat()
+            and row_asset == asset_key(action.target_product)
+        ):
+            return True
+    return False
 
 
 def _save_transaction_trading_prices(
@@ -113,6 +161,11 @@ def main() -> int:
     parser.add_argument(
         "--trading-prices", type=Path, default=config.trading_prices_file
     )
+    parser.add_argument(
+        "--custom-operations",
+        type=Path,
+        default=config.sanitized_dir / "custom_operations" / "corporate_actions.csv",
+    )
     args = parser.parse_args()
     transactions = ingest(
         args.input,
@@ -120,6 +173,7 @@ def main() -> int:
         args.assets,
         args.holdings,
         trading_prices_path=args.trading_prices,
+        custom_operations_path=args.custom_operations,
     )
     print(
         f"Wrote {len(transactions)} transactions, assets, and holdings "

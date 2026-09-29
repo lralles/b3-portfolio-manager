@@ -5,3 +5,9 @@
 **/*.pyc
 **/__pycache__
 config/config.yaml
+
+# Manually authored corporate-action inputs are part of the rebuild definition.
+data/santized/custom_operations/*.csv
+
+# task files
+task-*.md

@@ -23,6 +23,9 @@ SOURCE_OPERATION_TYPE_MAP = {
     "rendimento": TransactionOperationType.INCOME,
     "transferência": TransactionOperationType.TRANSFER,
     "venda": TransactionOperationType.SALE,
+    "incorporação": TransactionOperationType.INCORPORATION,
+    "resgate": TransactionOperationType.REDEMPTION,
+    "fração em ativos": TransactionOperationType.FRACTION_SETTLEMENT,
 }
 
 SOURCE_SETTLEMENT_TRANSFER = "transferência - liquidação"

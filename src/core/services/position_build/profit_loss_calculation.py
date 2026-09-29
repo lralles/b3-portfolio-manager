@@ -32,7 +32,10 @@ def calculate_profit_loss(
             type=ProfitLossType.REALIZED,
         )
 
-    if transaction.operation_type is not TransactionOperationType.SALE:
+    if transaction.operation_type is TransactionOperationType.REDEMPTION:
+        if transaction.corporate_action_related_asset_id:
+            return None
+    elif transaction.operation_type is not TransactionOperationType.SALE:
         return None
 
     if position is None:
