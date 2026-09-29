@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import csv
 import re
+from collections import defaultdict
 from datetime import date
 from pathlib import Path
 
@@ -29,6 +30,82 @@ def asset_key(name: str) -> str:
     return match.group(1) if match else name.strip()
 
 
+TRANSFERRED_INCOME_OPERATION_MAP = {
+    "dividendo - transferido": "dividendo",
+    "juros sobre capital próprio - transferido": "juros sobre capital próprio",
+}
+
+
+def normalize_transferred_income_rows(
+    rows: list[dict[str, str]],
+) -> list[dict[str, str]]:
+    """Collapse custody debit/credit pairs into one credited income event."""
+    grouped: dict[tuple[str, ...], dict[str, list[dict[str, str]]]] = defaultdict(
+        lambda: {"debito": [], "credito": []}
+    )
+    group_order: list[tuple[str, ...]] = []
+    normalized_rows: list[dict[str, str]] = []
+
+    for row in rows:
+        operation = row["movimentacao"].strip().lower()
+        if operation not in TRANSFERRED_INCOME_OPERATION_MAP:
+            normalized_rows.append(row)
+            continue
+
+        key = (
+            operation,
+            row["data"].strip(),
+            row["produto"].strip(),
+            row["quantidade"].strip(),
+            row["preco_unitario"].strip(),
+            row["valor_operacao"].strip(),
+        )
+        if key not in grouped:
+            group_order.append(key)
+        direction = row["entrada_saida"].strip().lower()
+        if direction not in ("debito", "credito"):
+            raise ValueError(
+                f"Unknown direction for transferred income: {direction!r}"
+            )
+        grouped[key][direction].append(row)
+
+    transferred_rows: dict[tuple[str, ...], list[dict[str, str]]] = {}
+    for key in group_order:
+        group = grouped[key]
+        if len(group["debito"]) != len(group["credito"]):
+            raise ValueError(
+                "Transferred income must have matching debit and credit rows: "
+                f"{key!r} (debit={len(group['debito'])}, "
+                f"credit={len(group['credito'])})"
+            )
+        normalized_operation = TRANSFERRED_INCOME_OPERATION_MAP[key[0]]
+        transferred_rows[key] = []
+        for row in group["credito"]:
+            normalized_row = dict(row)
+            normalized_row["movimentacao"] = normalized_operation
+            transferred_rows[key].append(normalized_row)
+
+    result: list[dict[str, str]] = []
+    emitted_groups: set[tuple[str, ...]] = set()
+    for row in rows:
+        operation = row["movimentacao"].strip().lower()
+        if operation not in TRANSFERRED_INCOME_OPERATION_MAP:
+            result.append(row)
+            continue
+        key = (
+            operation,
+            row["data"].strip(),
+            row["produto"].strip(),
+            row["quantidade"].strip(),
+            row["preco_unitario"].strip(),
+            row["valor_operacao"].strip(),
+        )
+        if key not in emitted_groups:
+            result.extend(transferred_rows[key])
+            emitted_groups.add(key)
+    return result
+
+
 def ingest(
     input_path: Path,
     output_path: Path,
@@ -47,6 +124,7 @@ def ingest(
         rows = list(csv.DictReader(fh))
     corporate_actions = load(custom_operations_path)
     rows = [row for row in rows if not _is_replaced_by_custom_action(row, corporate_actions)]
+    rows = normalize_transferred_income_rows(rows)
 
     names_by_key: dict[str, list[str]] = {}
     for row in rows:

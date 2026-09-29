@@ -19,7 +19,9 @@ SOURCE_IO_FLOW_MAP = {
 SOURCE_OPERATION_TYPE_MAP = {
     "compra": TransactionOperationType.PURCHASE,
     "dividendo": TransactionOperationType.DIVIDEND,
+    "dividendo - transferido": TransactionOperationType.DIVIDEND,
     "juros sobre capital próprio": TransactionOperationType.INTEREST_ON_EQUITY,
+    "juros sobre capital próprio - transferido": TransactionOperationType.INTEREST_ON_EQUITY,
     "rendimento": TransactionOperationType.INCOME,
     "transferência": TransactionOperationType.TRANSFER,
     "venda": TransactionOperationType.SALE,
@@ -29,12 +31,6 @@ SOURCE_OPERATION_TYPE_MAP = {
 }
 
 SOURCE_SETTLEMENT_TRANSFER = "transferência - liquidação"
-
-OPERATION_TYPES_WITH_OUTFLOW = {
-    TransactionOperationType.DIVIDEND,
-    TransactionOperationType.INTEREST_ON_EQUITY,
-}
-
 
 def transaction_from_sanitized_row(
     row: Mapping[str, str], transaction_id: str, asset_id: str, holding_id: str
@@ -65,9 +61,6 @@ def transaction_from_sanitized_row(
             raise ValueError(
                 f"Unknown transaction operation type: {operation_value!r}"
             ) from exc
-
-    if operation_type in OPERATION_TYPES_WITH_OUTFLOW:
-        io_flow = IOFlow.OUTFLOW
 
     try:
         transaction_date = date.fromisoformat(date_value)
