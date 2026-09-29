@@ -15,6 +15,7 @@ class SourcePositionSanitizationTests(unittest.TestCase):
             asset_type_from_sheet_name("Fundo de Investimento"), AssetType.FII
         )
         self.assertEqual(asset_type_from_sheet_name("ETF"), AssetType.ETF)
+        self.assertEqual(asset_type_from_sheet_name("Renda Fixa"), AssetType.PRIVATE_BOND)
         self.assertEqual(
             asset_type_from_sheet_name("Tesouro Direto"), AssetType.TREASURY_BOND
         )
