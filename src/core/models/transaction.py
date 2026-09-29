@@ -22,6 +22,14 @@ class TransactionOperationType(StrEnum):
     INCORPORATION = "incorporation"
     REDEMPTION = "redemption"
     FRACTION_SETTLEMENT = "fraction_settlement"
+    ASSET_BONUS = "asset_bonus"
+    ASSET_SPLIT = "asset_split"
+    SUBSCRIPTION_RIGHT_GRANT = "subscription_right_grant"
+    SUBSCRIPTION_RIGHT_EXPIRY = "subscription_right_expiry"
+    SUBSCRIPTION_RIGHT_DISPOSAL = "subscription_right_disposal"
+    RIGHTS_TRANSFER = "rights_transfer"
+    FRACTION_AUCTION = "fraction_auction"
+    CASH_EVENT_TRANSFER = "cash_event_transfer"
 
 
 def parse_decimal(value: str) -> Decimal | None:

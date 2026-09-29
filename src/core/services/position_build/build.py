@@ -9,10 +9,13 @@ from ...models.transaction import IOFlow, Transaction, TransactionOperationType
 from .handlers import (
     CustodyTransferHandler,
     CorporateActionHandler,
+    FractionAuctionHandler,
     IgnoredTransactionHandler,
     PositionAccumulator,
     PositionTransactionHandler,
     PurchaseHandler,
+    QuantityDecreaseHandler,
+    QuantityIncreaseHandler,
     SaleHandler,
 )
 from .profit_loss_calculation import calculate_profit_loss
@@ -28,6 +31,14 @@ POSITION_HANDLERS: dict[TransactionOperationType, PositionTransactionHandler] = 
     TransactionOperationType.INCORPORATION: CorporateActionHandler(),
     TransactionOperationType.REDEMPTION: CorporateActionHandler(),
     TransactionOperationType.FRACTION_SETTLEMENT: CorporateActionHandler(),
+    TransactionOperationType.ASSET_BONUS: QuantityIncreaseHandler(),
+    TransactionOperationType.ASSET_SPLIT: QuantityIncreaseHandler(),
+    TransactionOperationType.SUBSCRIPTION_RIGHT_GRANT: QuantityIncreaseHandler(),
+    TransactionOperationType.SUBSCRIPTION_RIGHT_EXPIRY: QuantityDecreaseHandler(),
+    TransactionOperationType.SUBSCRIPTION_RIGHT_DISPOSAL: QuantityDecreaseHandler(),
+    TransactionOperationType.RIGHTS_TRANSFER: CustodyTransferHandler(),
+    TransactionOperationType.FRACTION_AUCTION: FractionAuctionHandler(),
+    TransactionOperationType.CASH_EVENT_TRANSFER: CustodyTransferHandler(),
 }
 
 

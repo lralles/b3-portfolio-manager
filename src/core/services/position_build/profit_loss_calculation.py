@@ -11,6 +11,7 @@ INCOME_OPERATION_TYPES = {
     TransactionOperationType.DIVIDEND,
     TransactionOperationType.INTEREST_ON_EQUITY,
     TransactionOperationType.INCOME,
+    TransactionOperationType.FRACTION_AUCTION,
 }
 
 

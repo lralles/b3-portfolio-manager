@@ -73,3 +73,25 @@ class CorporateActionHandler:
 
     def apply(self, position: PositionAccumulator, transaction: Transaction) -> None:
         return None
+
+
+class QuantityIncreaseHandler:
+    """Add assets received without purchase capital."""
+
+    def apply(self, position: PositionAccumulator, transaction: Transaction) -> None:
+        position.current_quantity += quantity_of(transaction)
+
+
+class QuantityDecreaseHandler:
+    """Remove assets without classifying the event as a sale."""
+
+    def apply(self, position: PositionAccumulator, transaction: Transaction) -> None:
+        position.current_quantity -= quantity_of(transaction)
+
+
+class FractionAuctionHandler:
+    """Remove the fractional remainder sold through an auction."""
+
+    def apply(self, position: PositionAccumulator, transaction: Transaction) -> None:
+        fraction = position.current_quantity % 1
+        position.current_quantity -= fraction
