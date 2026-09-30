@@ -18,6 +18,21 @@ def sanitized_row(direction: str) -> dict[str, str]:
 
 
 class TransactionMapperTests(unittest.TestCase):
+    def test_position_income_is_an_outflow_even_when_b3_credits_it(self) -> None:
+        for operation in (
+            "Dividendo",
+            "Juros Sobre Capital Próprio",
+            "Rendimento",
+            "Leilão de Fração",
+        ):
+            with self.subTest(operation=operation):
+                row = sanitized_row("credito")
+                row["movimentacao"] = operation
+                transaction = transaction_from_sanitized_row(
+                    row, "transaction_001", "asset_001", "holding_001"
+                )
+                self.assertEqual(transaction.io_flow, IOFlow.OUTFLOW)
+
     def test_buy_sell_credit_is_mapped_to_purchase(self) -> None:
         row = sanitized_row("credito")
         row["movimentacao"] = "Compra / Venda"
