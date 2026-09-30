@@ -136,7 +136,8 @@ def ingest(
             action.target_product,
             action.redemption_product,
         ):
-            names_by_key.setdefault(asset_key(name), []).append(name)
+            if name.strip():
+                names_by_key.setdefault(asset_key(name), []).append(name)
     asset_names = sorted(min(names) for names in names_by_key.values())
     holding_names = sorted({row["instituicao"].strip() for row in rows})
     asset_models = [
@@ -189,6 +190,14 @@ def _is_replaced_by_custom_action(
             return True
         if (
             operation == "resgate"
+            and action.redemption_date is not None
+            and row_date == action.redemption_date.isoformat()
+            and row_asset == asset_key(action.redemption_product)
+        ):
+            return True
+        if (
+            operation == "vencimento"
+            and action.redemption_date is not None
             and row_date == action.redemption_date.isoformat()
             and row_asset == asset_key(action.redemption_product)
         ):

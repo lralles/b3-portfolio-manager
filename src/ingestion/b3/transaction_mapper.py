@@ -35,6 +35,7 @@ SOURCE_OPERATION_TYPE_MAP = {
     "leilão de fração": TransactionOperationType.FRACTION_AUCTION,
     "incorporação": TransactionOperationType.INCORPORATION,
     "resgate": TransactionOperationType.REDEMPTION,
+    "vencimento": TransactionOperationType.REDEMPTION,
     "fração em ativos": TransactionOperationType.FRACTION_SETTLEMENT,
 }
 
