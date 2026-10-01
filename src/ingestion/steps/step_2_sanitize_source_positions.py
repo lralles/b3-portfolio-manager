@@ -28,6 +28,7 @@ RAW_COLUMNS = [
     "Motivo",
     "Preço de Fechamento",
     "Valor Atualizado",
+    "Vencimento",
 ]
 OUTPUT_COLUMNS = RAW_COLUMNS + ["asset_type", "evaluation_date"]
 
@@ -162,6 +163,10 @@ def load_position_rows(input_path: Path) -> list[dict[str, str]]:
                     record["Código ISIN"] = record[
                         "Código ISIN / Distribuição"
                     ].split(" - ", 1)[0].strip()
+                if asset_type is AssetType.PRIVATE_BOND and record["Vencimento"]:
+                    record["Produto"] = (
+                        f"{record['Produto']} - {record['Vencimento']}"
+                    )
                 if record["Produto"] and record["Quantidade"]:
                     records.append(record)
     return records
