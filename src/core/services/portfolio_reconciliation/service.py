@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from decimal import Decimal
 
 from config import Config
@@ -41,13 +42,29 @@ class PortfolioReconciliationService:
             for source_position in source_positions
             if source_position.evaluation_date == latest_evaluation_date
         )
+        grouped_source_positions: dict[str, SourcePosition] = {}
+        unresolved_source_positions: list[SourcePosition] = []
+        for source_position in latest_source_positions:
+            if source_position.asset_id is None:
+                unresolved_source_positions.append(source_position)
+                continue
+            existing = grouped_source_positions.get(source_position.asset_id)
+            if existing is None:
+                grouped_source_positions[source_position.asset_id] = source_position
+            else:
+                grouped_source_positions[source_position.asset_id] = replace(
+                    existing,
+                    quantity=existing.quantity + source_position.quantity,
+                )
+        reconciled_source_positions = list(grouped_source_positions.values())
+        reconciled_source_positions.extend(unresolved_source_positions)
         source_positions_by_asset = {
             source_position.asset_id: source_position
-            for source_position in latest_source_positions
+            for source_position in reconciled_source_positions
             if source_position.asset_id is not None
         }
 
-        for source_position in latest_source_positions:
+        for source_position in reconciled_source_positions:
             position = (
                 computed_positions.get(source_position.asset_id)
                 if source_position.asset_id is not None

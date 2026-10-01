@@ -51,6 +51,20 @@ class PortfolioReconciliationServiceTests(unittest.TestCase):
         self.assertEqual(result.status, "success")
         self.assertEqual(result.conflicts, [])
 
+    def test_groups_source_quantities_by_asset(self) -> None:
+        result = PortfolioReconciliationService(
+            StubRepository(
+                [
+                    source_position("asset_001", "2"),
+                    source_position("asset_001", "3"),
+                ]
+            ),
+            StubRepository([position("asset_001", "5")]),
+        ).reconcile()
+
+        self.assertEqual(result.status, "success")
+        self.assertEqual(result.conflicts, [])
+
     def test_reports_quantity_conflict(self) -> None:
         source = source_position("asset_001", "2")
         computed = position("asset_001", "3")
