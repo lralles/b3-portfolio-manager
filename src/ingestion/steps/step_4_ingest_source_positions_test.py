@@ -113,6 +113,34 @@ class SourcePositionIngestionTests(unittest.TestCase):
                 [Asset("asset_001", "Example Asset", "BR1234567890", AssetType.STOCKS)],
             )
 
+    def test_prefix_fallback_does_not_assign_unmatched_fixed_income_asset(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            assets_path = root / "assets.csv"
+            input_path = root / "sanitized_positions.csv"
+            output_path = root / "source_positions.csv"
+            AssetRepository(assets_path).save(
+                [Asset("asset_001", "CDB - CDB123 - BANK", asset_type=AssetType.PRIVATE_BOND)]
+            )
+            fieldnames = ["evaluation_date", "Produto", "Quantidade", "asset_type"]
+            with input_path.open("w", newline="", encoding="utf-8") as fh:
+                writer = csv.DictWriter(fh, fieldnames=fieldnames)
+                writer.writeheader()
+                writer.writerow(
+                    {
+                        "evaluation_date": "2024-01-31",
+                        "Produto": "CDB - BANK - 04/06/2024",
+                        "Quantidade": "2",
+                        "asset_type": "private_bond",
+                    }
+                )
+
+            ingest(input_path, output_path, assets_path)
+
+            with output_path.open(newline="", encoding="utf-8") as fh:
+                row = next(csv.DictReader(fh))
+            self.assertEqual(row["asset_id"], "")
+
     def test_ingest_extracts_trading_prices_by_asset_type(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -169,6 +197,14 @@ class SourcePositionIngestionTests(unittest.TestCase):
                             "Valor Atualizado": "100",
                             "asset_type": "treasury_bond",
                         },
+                        {
+                            "evaluation_date": "2024-01-31",
+                            "Produto": "Bond",
+                            "Quantidade": "0.5",
+                            "Preço de Fechamento": "-",
+                            "Valor Atualizado": "99",
+                            "asset_type": "treasury_bond",
+                        },
                     ]
                 )
 
@@ -183,7 +219,7 @@ class SourcePositionIngestionTests(unittest.TestCase):
             self.assertEqual(
                 [(price.asset_id, price.value) for price in prices],
                 [
-                    ("bond", Decimal("200")),
+                    ("bond", Decimal("198")),
                     ("fii", Decimal("20.25")),
                     ("stock", Decimal("10.50")),
                 ],

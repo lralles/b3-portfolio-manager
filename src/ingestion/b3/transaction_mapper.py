@@ -35,10 +35,21 @@ SOURCE_OPERATION_TYPE_MAP = {
     "leilão de fração": TransactionOperationType.FRACTION_AUCTION,
     "incorporação": TransactionOperationType.INCORPORATION,
     "resgate": TransactionOperationType.REDEMPTION,
+    "vencimento": TransactionOperationType.REDEMPTION,
     "fração em ativos": TransactionOperationType.FRACTION_SETTLEMENT,
 }
 
 SOURCE_SETTLEMENT_TRANSFER = "transferência - liquidação"
+SOURCE_BUY_SELL = "compra / venda"
+
+POSITION_OUTFLOW_OPERATION_TYPES = {
+    TransactionOperationType.SALE,
+    TransactionOperationType.DIVIDEND,
+    TransactionOperationType.INTEREST_ON_EQUITY,
+    TransactionOperationType.INCOME,
+    TransactionOperationType.REDEMPTION,
+    TransactionOperationType.FRACTION_AUCTION,
+}
 
 def transaction_from_sanitized_row(
     row: Mapping[str, str], transaction_id: str, asset_id: str, holding_id: str
@@ -56,7 +67,7 @@ def transaction_from_sanitized_row(
     except KeyError as exc:
         raise ValueError(f"Unknown transaction direction: {direction_value!r}") from exc
 
-    if operation_value == SOURCE_SETTLEMENT_TRANSFER:
+    if operation_value in (SOURCE_SETTLEMENT_TRANSFER, SOURCE_BUY_SELL):
         operation_type = (
             TransactionOperationType.PURCHASE
             if io_flow is IOFlow.INFLOW
@@ -69,6 +80,11 @@ def transaction_from_sanitized_row(
             raise ValueError(
                 f"Unknown transaction operation type: {operation_value!r}"
             ) from exc
+
+    if operation_type in POSITION_OUTFLOW_OPERATION_TYPES:
+        io_flow = IOFlow.OUTFLOW
+    elif operation_type is TransactionOperationType.PURCHASE:
+        io_flow = IOFlow.INFLOW
 
     try:
         transaction_date = date.fromisoformat(date_value)

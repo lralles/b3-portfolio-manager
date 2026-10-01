@@ -35,8 +35,8 @@ class CorporateAction:
     target_product: str
     target_quantity: Decimal
     redemption_product: str
-    redemption_date: date
-    redemption_value: Decimal
+    redemption_date: date | None
+    redemption_value: Decimal | None
     fraction_settlement_date: date
 
 
@@ -59,8 +59,16 @@ def load(path: Path) -> list[CorporateAction]:
                 target_product=row["target_product"].strip(),
                 target_quantity=Decimal(row["target_quantity"].strip()),
                 redemption_product=row["redemption_product"].strip(),
-                redemption_date=date.fromisoformat(row["redemption_date"].strip()),
-                redemption_value=Decimal(row["redemption_value"].strip()),
+                redemption_date=(
+                    date.fromisoformat(row["redemption_date"].strip())
+                    if row["redemption_date"].strip()
+                    else None
+                ),
+                redemption_value=(
+                    Decimal(row["redemption_value"].strip())
+                    if row["redemption_value"].strip()
+                    else None
+                ),
                 fraction_settlement_date=date.fromisoformat(
                     row["fraction_settlement_date"].strip()
                 ),
@@ -77,7 +85,11 @@ def transactions_for(
 ) -> list[Transaction]:
     source_asset = assets[asset_key(action.source_product)]
     target_asset = assets[asset_key(action.target_product)]
-    redemption_asset = assets[asset_key(action.redemption_product)]
+    redemption_asset = (
+        assets[asset_key(action.redemption_product)]
+        if action.redemption_product
+        else None
+    )
     holding = holdings[action.holding]
     transaction_number = transaction_number_start
 
@@ -87,7 +99,7 @@ def transactions_for(
         transaction_number += 1
         return value
 
-    return [
+    transactions = [
         Transaction(
             transaction_id=next_id(),
             io_flow=IOFlow.OUTFLOW,
@@ -114,19 +126,28 @@ def transactions_for(
             corporate_action_id=action.corporate_action_id,
             corporate_action_related_asset_id=source_asset.asset_id,
         ),
-        Transaction(
-            transaction_id=next_id(),
-            io_flow=IOFlow.INFLOW,
-            date=action.redemption_date,
-            operation_type=TransactionOperationType.REDEMPTION,
-            asset_id=redemption_asset.asset_id,
-            holding_id=holding.holding_id,
-            quantity=None,
-            unit_price=None,
-            operation_value=action.redemption_value,
-            corporate_action_id=action.corporate_action_id,
-            corporate_action_related_asset_id=target_asset.asset_id,
-        ),
+    ]
+    if (
+        redemption_asset is not None
+        and action.redemption_date is not None
+        and action.redemption_value is not None
+    ):
+        transactions.append(
+            Transaction(
+                transaction_id=next_id(),
+                io_flow=IOFlow.OUTFLOW,
+                date=action.redemption_date,
+                operation_type=TransactionOperationType.REDEMPTION,
+                asset_id=redemption_asset.asset_id,
+                holding_id=holding.holding_id,
+                quantity=None,
+                unit_price=None,
+                operation_value=action.redemption_value,
+                corporate_action_id=action.corporate_action_id,
+                corporate_action_related_asset_id=target_asset.asset_id,
+            )
+        )
+    transactions.append(
         Transaction(
             transaction_id=next_id(),
             io_flow=IOFlow.OUTFLOW,
@@ -139,5 +160,6 @@ def transactions_for(
             operation_value=None,
             corporate_action_id=action.corporate_action_id,
             corporate_action_related_asset_id=None,
-        ),
-    ]
+        )
+    )
+    return transactions
