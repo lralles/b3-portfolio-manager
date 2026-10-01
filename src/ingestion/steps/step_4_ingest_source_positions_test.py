@@ -197,6 +197,14 @@ class SourcePositionIngestionTests(unittest.TestCase):
                             "Valor Atualizado": "100",
                             "asset_type": "treasury_bond",
                         },
+                        {
+                            "evaluation_date": "2024-01-31",
+                            "Produto": "Bond",
+                            "Quantidade": "0.5",
+                            "Preço de Fechamento": "-",
+                            "Valor Atualizado": "99",
+                            "asset_type": "treasury_bond",
+                        },
                     ]
                 )
 
@@ -211,7 +219,7 @@ class SourcePositionIngestionTests(unittest.TestCase):
             self.assertEqual(
                 [(price.asset_id, price.value) for price in prices],
                 [
-                    ("bond", Decimal("200")),
+                    ("bond", Decimal("198")),
                     ("fii", Decimal("20.25")),
                     ("stock", Decimal("10.50")),
                 ],

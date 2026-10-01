@@ -16,6 +16,7 @@ from src.core.repositories.trading_price_repository import TradingPriceRepositor
 from src.core.services.asset_service import AssetService
 from src.core.services.source_position_service import SourcePositionService
 from src.ingestion.b3.source_position_mapper import source_position_from_sanitized_row
+from src.ingestion.equivalent_asset_names import load as load_equivalent_asset_names
 
 
 PREFIX_FALLBACK_ASSET_TYPES = {
@@ -37,9 +38,13 @@ def ingest(
     assets_path: Path,
     config: Config | None = None,
     trading_prices_path: Path | None = None,
+    equivalent_asset_names_path: Path | None = None,
 ):
     config = config or Config()
     trading_prices_path = trading_prices_path or config.trading_prices_file
+    equivalent_asset_names_path = equivalent_asset_names_path or (
+        config.sanitized_dir / "equivalent_asset_names" / "equivalent_asset_names.json"
+    )
     with input_path.open(newline="", encoding="utf-8") as fh:
         rows = list(csv.DictReader(fh))
     rows.sort(key=lambda row: date.fromisoformat(row["evaluation_date"].strip()))
@@ -51,10 +56,30 @@ def ingest(
     for asset in assets:
         lookup[normalized(asset.asset_name)] = asset
         lookup.setdefault(normalized(asset.asset_name.split(" - ", 1)[0]), asset)
+    equivalent_lookup: dict[str, Asset] = {}
+    assets_by_name = {normalized(asset.asset_name): asset for asset in assets}
+    for group in load_equivalent_asset_names(equivalent_asset_names_path):
+        canonical_assets = [
+            assets_by_name[normalized(name)]
+            for name in group
+            if normalized(name) in assets_by_name
+        ]
+        if not canonical_assets:
+            continue
+        if len(canonical_assets) != 1:
+            raise ValueError(
+                "Equivalent asset name group must contain exactly one stored asset name: "
+                f"{group!r}"
+            )
+        canonical_asset = canonical_assets[0]
+        for name in group:
+            equivalent_lookup[normalized(name)] = canonical_asset
     positions = []
     trading_prices = []
     for row in rows:
         asset = lookup.get(normalized(row["Produto"]))
+        if asset is None:
+            asset = equivalent_lookup.get(normalized(row["Produto"]))
         if (
             asset is None
             and row.get("asset_type", "").strip() in PREFIX_FALLBACK_ASSET_TYPES
@@ -62,6 +87,8 @@ def ingest(
             asset = lookup.get(normalized(row["Produto"].split(" - ", 1)[0]))
         if asset:
             asset = assets_by_id[asset.asset_id]
+            row = dict(row)
+            row["Produto"] = asset.asset_name
         isin = row.get("Código ISIN", "").strip()
         asset_type_value = row.get("asset_type", "").strip()
         if asset:
@@ -89,9 +116,11 @@ def ingest(
         (price.asset_id, price.evaluation_date): price for price in existing_prices
     }
     # Position prices are more recent/authoritative than transaction prices.
-    prices_by_key.update(
-        {(price.asset_id, price.evaluation_date): price for price in trading_prices}
-    )
+    for price in trading_prices:
+        key = (price.asset_id, price.evaluation_date)
+        existing_price = prices_by_key.get(key)
+        if existing_price is None or price.value < existing_price.value:
+            prices_by_key[key] = price
     trading_price_repository.save(prices_by_key.values())
     return positions
 
@@ -137,8 +166,21 @@ def main() -> int:
     parser.add_argument("--input", type=Path, default=config.sanitized_positions_file)
     parser.add_argument("--output", type=Path, default=config.source_positions_file)
     parser.add_argument("--assets", type=Path, default=config.assets_file)
+    parser.add_argument(
+        "--equivalent-asset-names",
+        type=Path,
+        default=config.sanitized_dir
+        / "equivalent_asset_names"
+        / "equivalent_asset_names.json",
+    )
     args = parser.parse_args()
-    positions = ingest(args.input, args.output, args.assets, config=config)
+    positions = ingest(
+        args.input,
+        args.output,
+        args.assets,
+        config=config,
+        equivalent_asset_names_path=args.equivalent_asset_names,
+    )
     print(f"Wrote {len(positions)} source positions to {args.output}")
     return 0
 
