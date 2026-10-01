@@ -18,6 +18,13 @@ from src.core.services.source_position_service import SourcePositionService
 from src.ingestion.b3.source_position_mapper import source_position_from_sanitized_row
 
 
+PREFIX_FALLBACK_ASSET_TYPES = {
+    AssetType.STOCKS.value,
+    AssetType.FII.value,
+    AssetType.ETF.value,
+}
+
+
 def normalized(value: str) -> str:
     value = unicodedata.normalize("NFKD", value)
     value = "".join(char for char in value if not unicodedata.combining(char))
@@ -47,9 +54,12 @@ def ingest(
     positions = []
     trading_prices = []
     for row in rows:
-        asset = lookup.get(normalized(row["Produto"])) or lookup.get(
-            normalized(row["Produto"].split(" - ", 1)[0])
-        )
+        asset = lookup.get(normalized(row["Produto"]))
+        if (
+            asset is None
+            and row.get("asset_type", "").strip() in PREFIX_FALLBACK_ASSET_TYPES
+        ):
+            asset = lookup.get(normalized(row["Produto"].split(" - ", 1)[0]))
         if asset:
             asset = assets_by_id[asset.asset_id]
         isin = row.get("Código ISIN", "").strip()
