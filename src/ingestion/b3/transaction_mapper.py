@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date
+from decimal import Decimal
 from typing import Mapping
 
 from ...core.models.transaction import (
@@ -91,6 +92,20 @@ def transaction_from_sanitized_row(
     except ValueError as exc:
         raise ValueError(f"Invalid transaction date: {date_value!r}") from exc
 
+    quantity = parse_decimal(row["quantidade"])
+    unit_price = parse_decimal(row["preco_unitario"])
+    operation_amount = parse_decimal(row["valor_operacao"])
+    if operation_value == "vencimento" and (
+        unit_price is None
+        or unit_price <= Decimal("0")
+        or operation_amount is None
+        or operation_amount <= Decimal("0")
+    ):
+        raise ValueError(
+            "VENCIMENTO transaction is missing a positive price: "
+            f"{transaction_id!r}"
+        )
+
     return Transaction(
         transaction_id=transaction_id,
         io_flow=io_flow,
@@ -98,7 +113,7 @@ def transaction_from_sanitized_row(
         operation_type=operation_type,
         asset_id=asset_id,
         holding_id=holding_id,
-        quantity=parse_decimal(row["quantidade"]),
-        unit_price=parse_decimal(row["preco_unitario"]),
-        operation_value=parse_decimal(row["valor_operacao"]),
+        quantity=quantity,
+        unit_price=unit_price,
+        operation_value=operation_amount,
     )

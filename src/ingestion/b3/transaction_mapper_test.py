@@ -44,6 +44,17 @@ class TransactionMapperTests(unittest.TestCase):
         self.assertEqual(transaction.io_flow, IOFlow.OUTFLOW)
         self.assertEqual(transaction.operation_type, TransactionOperationType.REDEMPTION)
 
+    def test_maturity_without_price_is_rejected(self) -> None:
+        row = sanitized_row("debito")
+        row["movimentacao"] = "Vencimento"
+        row["preco_unitario"] = "0"
+        row["valor_operacao"] = "0"
+
+        with self.assertRaisesRegex(ValueError, "VENCIMENTO transaction is missing a positive price"):
+            transaction_from_sanitized_row(
+                row, "transaction_001", "asset_001", "holding_001"
+            )
+
     def test_buy_sell_credit_is_mapped_to_purchase(self) -> None:
         row = sanitized_row("credito")
         row["movimentacao"] = "Compra / Venda"
