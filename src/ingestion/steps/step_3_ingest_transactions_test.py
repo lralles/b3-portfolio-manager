@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import tempfile
 import unittest
+from datetime import date
 from decimal import Decimal
 from pathlib import Path
 
@@ -10,6 +11,7 @@ from src.core.repositories.trading_price_repository import TradingPriceRepositor
 from src.ingestion.steps.step_3_ingest_transactions import (
     asset_key,
     normalize_transferred_income_rows,
+    _apply_custom_redemptions,
     ingest,
 )
 
@@ -57,6 +59,24 @@ class TransactionIngestionTests(unittest.TestCase):
             asset_key("B3SA3 - B3 S.A. – BRASIL, BOLSA, BALCÃO"), "B3SA3"
         )
         self.assertEqual(asset_key("Tesouro IPCA+ 2026"), "Tesouro IPCA+ 2026")
+
+    def test_custom_redemption_fills_value_and_unit_price(self) -> None:
+        row = {
+            "entrada_saida": "Debito",
+            "data": "2023-09-11",
+            "movimentacao": "VENCIMENTO",
+            "produto": "LCA - Example",
+            "quantidade": "2",
+            "preco_unitario": "0",
+            "valor_operacao": "0",
+        }
+
+        updated = _apply_custom_redemptions(
+            [row], {(date(2023, 9, 11), "LCA - Example"): Decimal("100")}
+        )
+
+        self.assertEqual(updated[0]["valor_operacao"], "100")
+        self.assertEqual(updated[0]["preco_unitario"], "50")
 
     def test_extracts_one_price_per_asset_and_date_from_buys_and_sells(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

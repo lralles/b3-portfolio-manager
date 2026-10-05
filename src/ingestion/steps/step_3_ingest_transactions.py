@@ -5,12 +5,13 @@ import csv
 import re
 from collections import defaultdict
 from datetime import date
+from decimal import Decimal
 from pathlib import Path
 
 from config import Config
 from src.core.models.asset import Asset
 from src.core.models.holding import Holding
-from src.core.models.transaction import Transaction, TransactionOperationType
+from src.core.models.transaction import Transaction, TransactionOperationType, parse_decimal
 from src.core.models.trading_price import TradingPrice
 from src.core.repositories.trading_price_repository import TradingPriceRepository
 from src.core.services.asset_service import AssetService
@@ -18,6 +19,7 @@ from src.core.services.holding_service import HoldingService
 from src.core.services.transaction_service import TransactionService
 from src.ingestion.b3.transaction_mapper import transaction_from_sanitized_row
 from src.ingestion.custom_operations import CorporateAction, load, transactions_for
+from src.ingestion.custom_redemptions import load as load_custom_redemptions
 
 
 def reference_id(prefix: str, name: str, names: list[str]) -> str:
@@ -114,17 +116,23 @@ def ingest(
     config: Config | None = None,
     trading_prices_path: Path | None = None,
     custom_operations_path: Path | None = None,
+    custom_redemptions_path: Path | None = None,
 ) -> list[Transaction]:
     config = config or Config()
     trading_prices_path = trading_prices_path or config.trading_prices_file
     custom_operations_path = custom_operations_path or (
         input_path.parent.parent / "custom_operations" / "corporate_actions.csv"
     )
+    custom_redemptions_path = custom_redemptions_path or (
+        input_path.parent.parent / "custom_operations" / "custom_redemptions.csv"
+    )
     with input_path.open(newline="", encoding="utf-8") as fh:
         rows = list(csv.DictReader(fh))
     corporate_actions = load(custom_operations_path)
+    custom_redemptions = load_custom_redemptions(custom_redemptions_path)
     rows = [row for row in rows if not _is_replaced_by_custom_action(row, corporate_actions)]
     rows = normalize_transferred_income_rows(rows)
+    rows = _apply_custom_redemptions(rows, custom_redemptions)
 
     names_by_key: dict[str, list[str]] = {}
     for row in rows:
@@ -177,6 +185,39 @@ def ingest(
 
     _save_transaction_trading_prices(transactions, trading_prices_path, config)
     return transactions
+
+
+def _apply_custom_redemptions(
+    rows: list[dict[str, str]], redemptions: dict[tuple[date, str], Decimal]
+) -> list[dict[str, str]]:
+    updated_rows = []
+    for row in rows:
+        if row["movimentacao"].strip().lower() != "vencimento":
+            updated_rows.append(row)
+            continue
+        operation_value = parse_decimal(row["valor_operacao"])
+        unit_price = parse_decimal(row["preco_unitario"])
+        if (
+            operation_value is not None
+            and operation_value > 0
+            and unit_price is not None
+            and unit_price > 0
+        ):
+            updated_rows.append(row)
+            continue
+        key = (date.fromisoformat(row["data"].strip()), row["produto"].strip())
+        value = redemptions.get(key)
+        if value is not None:
+            quantity = parse_decimal(row["quantidade"])
+            if quantity is None or quantity <= 0:
+                raise ValueError(f"VENCIMENTO transaction has invalid quantity: {row!r}")
+            updated_row = dict(row)
+            updated_row["valor_operacao"] = format(value, "f")
+            updated_row["preco_unitario"] = format(value / quantity, "f")
+            updated_rows.append(updated_row)
+        else:
+            updated_rows.append(row)
+    return updated_rows
 
 
 def _is_replaced_by_custom_action(
@@ -253,6 +294,11 @@ def main() -> int:
         type=Path,
         default=config.sanitized_dir / "custom_operations" / "corporate_actions.csv",
     )
+    parser.add_argument(
+        "--custom-redemptions",
+        type=Path,
+        default=config.sanitized_dir / "custom_operations" / "custom_redemptions.csv",
+    )
     args = parser.parse_args()
     transactions = ingest(
         args.input,
@@ -261,6 +307,7 @@ def main() -> int:
         args.holdings,
         trading_prices_path=args.trading_prices,
         custom_operations_path=args.custom_operations,
+        custom_redemptions_path=args.custom_redemptions,
     )
     print(
         f"Wrote {len(transactions)} transactions, assets, and holdings "
