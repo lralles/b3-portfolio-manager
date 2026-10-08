@@ -26,6 +26,10 @@ class PositionValueServiceTests(unittest.TestCase):
                 PositionValueService(repository).get(position, date(2024, 1, 31)),
                 PositionValue(position, price),
             )
+            self.assertEqual(
+                PositionValueService(repository).get(position, date(2024, 1, 31)).value,
+                Decimal("25.00"),
+            )
 
     def test_get_uses_latest_price_on_or_before_requested_date(self) -> None:
         position = Position("asset_001", Decimal("2"), Decimal("2"), Decimal("0"), Decimal("20"))
@@ -43,15 +47,18 @@ class PositionValueServiceTests(unittest.TestCase):
 
             self.assertEqual(result, PositionValue(position, latest_price))
 
-    def test_get_raises_when_price_is_missing(self) -> None:
+    def test_get_uses_zero_when_price_is_missing(self) -> None:
         position = Position("asset_001", Decimal("2"), Decimal("2"), Decimal("0"), Decimal("20"))
 
         with tempfile.TemporaryDirectory() as directory:
             repository = TradingPriceRepository(Path(directory) / "prices.csv")
             repository.save([])
 
-            with self.assertRaisesRegex(ValueError, "No trading price"):
-                PositionValueService(repository).get(position, date(2024, 1, 31))
+            result = PositionValueService(repository).get(position, date(2024, 1, 31))
+
+            self.assertIsNone(result.trading_price.evaluation_date)
+            self.assertEqual(result.trading_price.value, Decimal("0"))
+            self.assertEqual(result.value, Decimal("0"))
 
 
 if __name__ == "__main__":

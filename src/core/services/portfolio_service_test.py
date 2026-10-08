@@ -53,6 +53,8 @@ class PortfolioServiceTests(unittest.TestCase):
             )),
         )
         self.assertEqual(value_service.calls, [(position, price_date) for position in positions])
+        self.assertEqual(portfolio.portfolio_value, Decimal("50"))
+        self.assertEqual(portfolio.value, Decimal("50"))
 
 
 if __name__ == "__main__":

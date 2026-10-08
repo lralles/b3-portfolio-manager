@@ -11,6 +11,6 @@ DEFAULT_CURRENCY = "BRL"
 @dataclass(frozen=True, slots=True)
 class TradingPrice:
     asset_id: str
-    evaluation_date: date
+    evaluation_date: date | None
     value: Decimal
     currency: str = DEFAULT_CURRENCY

@@ -39,10 +39,7 @@ class TradingPriceRepository:
             available_prices.append(trading_price)
 
         if not available_prices:
-            raise ValueError(
-                f"No trading price found for asset {asset_id!r} "
-                f"on or before {price_date.isoformat()}"
-            )
+            return TradingPrice(asset_id, None, Decimal("0"))
 
         latest_price = available_prices[0]
         for trading_price in available_prices[1:]:

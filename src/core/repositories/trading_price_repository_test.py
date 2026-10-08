@@ -54,15 +54,17 @@ class TradingPriceRepositoryTests(unittest.TestCase):
                 prices[1],
             )
 
-    def test_latest_for_asset_on_or_before_date_raises_when_missing(self) -> None:
+    def test_latest_for_asset_on_or_before_date_returns_zero_when_missing(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             repository = TradingPriceRepository(Path(directory) / "prices.csv")
             repository.save([])
 
-            with self.assertRaisesRegex(ValueError, "No trading price"):
+            self.assertEqual(
                 repository.latest_for_asset_on_or_before(
                     "asset_001", date(2024, 1, 31)
-                )
+                ),
+                TradingPrice("asset_001", None, Decimal("0")),
+            )
 
 
 if __name__ == "__main__":
