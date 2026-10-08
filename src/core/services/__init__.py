@@ -5,6 +5,8 @@ from .asset_service import AssetService
 from .holding_service import HoldingService
 from .source_position_service import SourcePositionService
 from .transaction_service import TransactionService
+from .position_value_service import PositionValueService
+from .portfolio_service import PortfolioService
 from .portfolio_reconciliation import (
     PositionConflict,
     PortfolioReconciliationService,
@@ -19,6 +21,8 @@ __all__ = [
     "HoldingService",
     "SourcePositionService",
     "TransactionService",
+    "PositionValueService",
+    "PortfolioService",
     "PositionConflict",
     "PortfolioReconciliationService",
     "PortfolioReconciliationStatus",

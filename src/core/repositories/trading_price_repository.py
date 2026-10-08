@@ -26,6 +26,36 @@ class TradingPriceRepository:
         with self.csv_path.open(newline="", encoding="utf-8") as fh:
             return [_from_store_row(row) for row in csv.DictReader(fh)]
 
+    def latest_for_asset_on_or_before(
+        self, asset_id: str, price_date: date
+    ) -> TradingPrice:
+        """Return the latest stored price available on or before a date."""
+        available_prices = []
+        for trading_price in self.all():
+            if trading_price.asset_id != asset_id:
+                continue
+            if trading_price.evaluation_date > price_date:
+                continue
+            available_prices.append(trading_price)
+
+        if not available_prices:
+            raise ValueError(
+                f"No trading price found for asset {asset_id!r} "
+                f"on or before {price_date.isoformat()}"
+            )
+
+        latest_price = available_prices[0]
+        for trading_price in available_prices[1:]:
+            if trading_price.evaluation_date > latest_price.evaluation_date:
+                latest_price = trading_price
+                continue
+            if trading_price.evaluation_date == latest_price.evaluation_date:
+                raise ValueError(
+                    f"Multiple trading prices found for asset {asset_id!r} "
+                    f"on {latest_price.evaluation_date.isoformat()}"
+                )
+        return latest_price
+
     def save(self, trading_prices: Iterable[TradingPrice]) -> None:
         trading_prices = sorted(
             trading_prices,
