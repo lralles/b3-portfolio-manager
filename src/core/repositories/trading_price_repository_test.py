@@ -36,6 +36,36 @@ class TradingPriceRepositoryTests(unittest.TestCase):
                 "asset_002",
             ])
 
+    def test_latest_for_asset_on_or_before_date(self) -> None:
+        prices = [
+            TradingPrice("asset_001", date(2024, 1, 1), Decimal("10")),
+            TradingPrice("asset_001", date(2024, 1, 31), Decimal("12.50")),
+            TradingPrice("asset_001", date(2024, 3, 1), Decimal("13")),
+        ]
+
+        with tempfile.TemporaryDirectory() as directory:
+            repository = TradingPriceRepository(Path(directory) / "prices.csv")
+            repository.save(prices)
+
+            self.assertEqual(
+                repository.latest_for_asset_on_or_before(
+                    "asset_001", date(2024, 2, 15)
+                ),
+                prices[1],
+            )
+
+    def test_latest_for_asset_on_or_before_date_returns_zero_when_missing(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            repository = TradingPriceRepository(Path(directory) / "prices.csv")
+            repository.save([])
+
+            self.assertEqual(
+                repository.latest_for_asset_on_or_before(
+                    "asset_001", date(2024, 1, 31)
+                ),
+                TradingPrice("asset_001", None, Decimal("0")),
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
