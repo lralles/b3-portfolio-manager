@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from decimal import Decimal, InvalidOperation
 from typing import Mapping
 
@@ -24,6 +25,7 @@ class Position:
     total_sold_quantity: Decimal
     invested_capital: Decimal
     asset: Asset | None = None
+    reference_date: date | None = None
 
     @property
     def key(self) -> str:
@@ -41,6 +43,7 @@ class Position:
             total_sold_quantity=self.total_sold_quantity,
             invested_capital=self.invested_capital,
             asset=asset,
+            reference_date=self.reference_date,
         )
 
     @classmethod
@@ -56,6 +59,18 @@ class Position:
         except KeyError as exc:
             raise ValueError(f"Missing stored position field: {exc.args[0]}") from exc
 
+        reference_date_value = row.get("reference_date", "").strip()
+        try:
+            reference_date = (
+                date.fromisoformat(reference_date_value)
+                if reference_date_value
+                else None
+            )
+        except ValueError as exc:
+            raise ValueError(
+                f"Invalid stored position reference_date: {row.get('reference_date')!r}"
+            ) from exc
+
         if not asset_id:
             raise ValueError("Stored position has an empty asset_id")
 
@@ -65,6 +80,7 @@ class Position:
             total_acquired_quantity,
             total_sold_quantity,
             invested_capital,
+            reference_date=reference_date,
         )
 
     def to_store_row(self) -> dict[str, str]:
@@ -74,6 +90,9 @@ class Position:
             "total_acquired_quantity": format(self.total_acquired_quantity, "f"),
             "total_sold_quantity": format(self.total_sold_quantity, "f"),
             "invested_capital": format(self.invested_capital, "f"),
+            "reference_date": self.reference_date.isoformat()
+            if self.reference_date is not None
+            else "",
         }
 
 
@@ -83,4 +102,5 @@ POSITION_COLUMNS = [
     "total_acquired_quantity",
     "total_sold_quantity",
     "invested_capital",
+    "reference_date",
 ]
