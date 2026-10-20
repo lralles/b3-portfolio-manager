@@ -46,9 +46,30 @@ def build_positions(
     transactions: Iterable[Transaction],
 ) -> tuple[list[Position], list[ProfitLoss]]:
     """Build consolidated positions and realized profit/loss from transactions."""
+    return _build_positions(transactions)
+
+
+def build_position_history(
+    transactions: Iterable[Transaction],
+) -> tuple[list[Position], list[ProfitLoss], list[Position]]:
+    """Build final positions and snapshots only when an asset is updated."""
+    history: list[Position] = []
+    positions, profit_losses = _build_positions(transactions, history)
+    return positions, profit_losses, history
+
+
+def _build_positions(
+    transactions: Iterable[Transaction],
+    history: list[Position] | None = None,
+) -> tuple[list[Position], list[ProfitLoss]]:
+    """Build positions, optionally recording each affected asset snapshot."""
     accumulators: dict[str, PositionAccumulator] = {}
     profit_losses: list[ProfitLoss] = []
     corporate_action_basis: dict[str, Decimal] = {}
+
+    def record(position: PositionAccumulator) -> None:
+        if history is not None:
+            history.append(position.to_position())
 
     ordered_transactions = sorted(transactions, key=lambda transaction: transaction.date)
     for transaction in ordered_transactions:
@@ -91,6 +112,7 @@ def build_positions(
                 position.current_quantity -= quantity
                 position.invested_capital = 0
                 position.reference_date = transaction.date
+                record(position)
             else:
                 position = accumulators.setdefault(
                     transaction.asset_id,
@@ -101,6 +123,7 @@ def build_positions(
                     transaction.corporate_action_id, Decimal("0")
                 )
                 position.reference_date = transaction.date
+                record(position)
             continue
 
         if transaction.operation_type is TransactionOperationType.REDEMPTION:
@@ -113,9 +136,11 @@ def build_positions(
                         transaction.operation_value or Decimal("0")
                     )
                     related_position.reference_date = transaction.date
+                    record(related_position)
             elif position is not None:
                 position.current_quantity -= transaction.quantity or Decimal("0")
                 position.reference_date = transaction.date
+                record(position)
             continue
 
         if transaction.operation_type is TransactionOperationType.FRACTION_SETTLEMENT:
@@ -123,6 +148,7 @@ def build_positions(
                 fraction = position.current_quantity % 1
                 position.current_quantity -= fraction
                 position.reference_date = transaction.date
+                record(position)
             continue
 
         if isinstance(handler, (CustodyTransferHandler, IgnoredTransactionHandler)):
@@ -135,6 +161,7 @@ def build_positions(
             )
         handler.apply(position, transaction)
         position.reference_date = transaction.date
+        record(position)
 
     positions = [
         accumulator.to_position()

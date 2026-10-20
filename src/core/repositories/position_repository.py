@@ -40,8 +40,11 @@ class PositionRepository:
         return sorted(latest_by_asset.values(), key=lambda position: position.key)
 
     def save(self, positions: Iterable[Position]) -> None:
+        latest_positions: dict[tuple[str, date | None], Position] = {}
+        for position in positions:
+            latest_positions[(position.asset_id, position.reference_date)] = position
         positions = sorted(
-            positions,
+            latest_positions.values(),
             key=lambda position: (position.key, position.reference_date or date.min),
         )
         self.csv_path.parent.mkdir(parents=True, exist_ok=True)

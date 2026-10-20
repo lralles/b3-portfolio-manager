@@ -8,7 +8,7 @@ from ..repositories.asset_repository import AssetRepository
 from ..repositories.profit_loss_repository import ProfitLossRepository
 from ..repositories.position_repository import PositionRepository
 from ..repositories.transaction_repository import TransactionRepository
-from .position_build import build_positions
+from .position_build import build_position_history, build_positions
 
 
 class PositionService:
@@ -38,21 +38,10 @@ class PositionService:
         return build_positions(self.transaction_repository.all())
 
     def build_and_save(self) -> tuple[list[Position], list[ProfitLoss]]:
-        transactions = sorted(
-            self.transaction_repository.all(), key=lambda transaction: transaction.date
+        transactions = self.transaction_repository.all()
+        positions, profit_losses, historical_positions = build_position_history(
+            transactions
         )
-        historical_positions: list[Position] = []
-        for transaction_date in sorted(
-            {transaction.date for transaction in transactions}
-        ):
-            positions, _ = build_positions(
-                transaction
-                for transaction in transactions
-                if transaction.date <= transaction_date
-            )
-            historical_positions.extend(positions)
-
-        positions, profit_losses = build_positions(transactions)
         self.position_repository.save(historical_positions)
         self.profit_loss_repository.save(profit_losses)
         return positions, profit_losses
