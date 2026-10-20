@@ -7,6 +7,7 @@ from .profit_loss import ProfitLoss, ProfitLossType
 from .trading_price import TradingPrice
 from .position_value import PositionValue
 from .portfolio import Portfolio
+from .portfolio_value import PortfolioValue
 
 __all__ = [
     "Holding",
@@ -21,4 +22,5 @@ __all__ = [
     "TradingPrice",
     "PositionValue",
     "Portfolio",
+    "PortfolioValue",
 ]

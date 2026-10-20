@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import date
+
 from config import Config
 
 from ..models.position import Position
@@ -49,10 +51,10 @@ class PositionService:
     def save(self) -> tuple[list[Position], list[ProfitLoss]]:
         return self.build_and_save()
 
-    def all(self) -> list[Position]:
+    def all(self, reference_date: date | None = None) -> list[Position]:
         assets = {asset.asset_id: asset for asset in self.asset_repository.all()}
         positions = []
-        for position in self.position_repository.all():
+        for position in self.position_repository.all(reference_date):
             try:
                 asset = assets[position.asset_id]
             except KeyError as exc:
