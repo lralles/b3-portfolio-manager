@@ -49,7 +49,12 @@ class PositionServiceTests(unittest.TestCase):
             saved, profit_losses = service.build_and_save()
 
             expected = Position(
-                "asset_001", Decimal("4"), Decimal("4"), Decimal("0"), Decimal("40")
+                "asset_001",
+                Decimal("4"),
+                Decimal("4"),
+                Decimal("0"),
+                Decimal("40"),
+                reference_date=date(2020, 1, 1),
             )
             self.assertEqual(saved, [expected])
             self.assertEqual(position_repository.all(), [expected])

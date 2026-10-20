@@ -90,6 +90,7 @@ def build_positions(
                 )
                 position.current_quantity -= quantity
                 position.invested_capital = 0
+                position.reference_date = transaction.date
             else:
                 position = accumulators.setdefault(
                     transaction.asset_id,
@@ -99,6 +100,7 @@ def build_positions(
                 position.invested_capital += corporate_action_basis.get(
                     transaction.corporate_action_id, Decimal("0")
                 )
+                position.reference_date = transaction.date
             continue
 
         if transaction.operation_type is TransactionOperationType.REDEMPTION:
@@ -110,14 +112,17 @@ def build_positions(
                     related_position.invested_capital -= (
                         transaction.operation_value or Decimal("0")
                     )
+                    related_position.reference_date = transaction.date
             elif position is not None:
                 position.current_quantity -= transaction.quantity or Decimal("0")
+                position.reference_date = transaction.date
             continue
 
         if transaction.operation_type is TransactionOperationType.FRACTION_SETTLEMENT:
             if position is not None:
                 fraction = position.current_quantity % 1
                 position.current_quantity -= fraction
+                position.reference_date = transaction.date
             continue
 
         if isinstance(handler, (CustodyTransferHandler, IgnoredTransactionHandler)):
@@ -129,6 +134,7 @@ def build_positions(
                 PositionAccumulator(asset_id=transaction.asset_id),
             )
         handler.apply(position, transaction)
+        position.reference_date = transaction.date
 
     positions = [
         accumulator.to_position()

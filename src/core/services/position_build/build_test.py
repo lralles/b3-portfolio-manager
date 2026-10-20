@@ -118,9 +118,36 @@ class BuildPositionsTests(unittest.TestCase):
 
         self.assertEqual(
             positions,
-            [Position("asset_001", Decimal("5"), Decimal("5"), Decimal("0"), Decimal("65"))],
+            [
+                Position(
+                    "asset_001",
+                    Decimal("5"),
+                    Decimal("5"),
+                    Decimal("0"),
+                    Decimal("65"),
+                    reference_date=date(2020, 1, 1),
+                )
+            ],
         )
         self.assertEqual(profit_losses, [])
+
+    def test_position_reference_date_is_latest_position_transaction_date(self) -> None:
+        positions, _ = build_positions([
+            transaction(
+                TransactionOperationType.PURCHASE,
+                transaction_date=date(2020, 1, 1),
+            ),
+            transaction(
+                TransactionOperationType.SALE,
+                io_flow=IOFlow.OUTFLOW,
+                transaction_id="transaction_002",
+                transaction_date=date(2020, 2, 15),
+                quantity="1",
+                operation_value="10",
+            ),
+        ])
+
+        self.assertEqual(positions[0].reference_date, date(2020, 2, 15))
 
     def test_sale_reduces_current_quantity_and_preserves_invested_capital(self) -> None:
         positions, profit_losses = build_positions([

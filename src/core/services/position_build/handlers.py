@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import date
 from decimal import Decimal
 from typing import Protocol
 
@@ -17,6 +18,7 @@ class PositionAccumulator:
     total_acquired_quantity: Decimal = Decimal("0")
     total_sold_quantity: Decimal = Decimal("0")
     invested_capital: Decimal = Decimal("0")
+    reference_date: date | None = None
 
     def to_position(self) -> Position:
         return Position(
@@ -25,6 +27,7 @@ class PositionAccumulator:
             total_acquired_quantity=self.total_acquired_quantity,
             total_sold_quantity=self.total_sold_quantity,
             invested_capital=self.invested_capital,
+            reference_date=self.reference_date,
         )
 
 
