@@ -29,6 +29,33 @@ class PositionRepositoryTests(unittest.TestCase):
 
             self.assertEqual(repository.all(), [positions[1], positions[0]])
 
+    def test_all_returns_latest_position_on_or_before_reference_date(self) -> None:
+        positions = [
+            Position(
+                "asset_001",
+                Decimal("2"),
+                Decimal("2"),
+                Decimal("0"),
+                Decimal("20"),
+                reference_date=date(2020, 1, 1),
+            ),
+            Position(
+                "asset_001",
+                Decimal("5"),
+                Decimal("5"),
+                Decimal("0"),
+                Decimal("50"),
+                reference_date=date(2020, 3, 1),
+            ),
+        ]
+
+        with tempfile.TemporaryDirectory() as directory:
+            repository = PositionRepository(Path(directory) / "positions.csv")
+            repository.save(positions)
+
+            self.assertEqual(repository.all(date(2020, 2, 1)), [positions[0]])
+            self.assertEqual(repository.all(date(2020, 3, 1)), [positions[1]])
+
 
 if __name__ == "__main__":
     unittest.main()

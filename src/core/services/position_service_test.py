@@ -82,6 +82,51 @@ class PositionServiceTests(unittest.TestCase):
 
             self.assertEqual(positions[0], expected_position.with_asset(expected_asset))
 
+    def test_build_and_save_persists_position_history(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            transaction_repository = TransactionRepository(root / "transactions.csv")
+            transaction_repository.save([
+                Transaction(
+                    "transaction_001",
+                    IOFlow.INFLOW,
+                    date(2020, 1, 1),
+                    TransactionOperationType.PURCHASE,
+                    "asset_001",
+                    "holding_001",
+                    Decimal("4"),
+                    Decimal("10"),
+                    Decimal("40"),
+                ),
+                Transaction(
+                    "transaction_002",
+                    IOFlow.OUTFLOW,
+                    date(2020, 3, 1),
+                    TransactionOperationType.SALE,
+                    "asset_001",
+                    "holding_001",
+                    Decimal("1"),
+                    Decimal("10"),
+                    Decimal("10"),
+                ),
+            ])
+            position_repository = PositionRepository(root / "positions.csv")
+            asset_repository = AssetRepository(root / "assets.csv")
+            asset_repository.save([Asset("asset_001", "Example Asset")])
+            service = PositionService(
+                transaction_repository=transaction_repository,
+                position_repository=position_repository,
+                asset_repository=asset_repository,
+                profit_loss_repository=ProfitLossRepository(root / "profit_losses.csv"),
+            )
+
+            service.build_and_save()
+
+            historical = position_repository.all(date(2020, 2, 1))
+            current = position_repository.all(date(2020, 3, 1))
+            self.assertEqual(historical[0].current_quantity, Decimal("4"))
+            self.assertEqual(current[0].current_quantity, Decimal("3"))
+
     def test_all_raises_when_position_asset_is_not_stored(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
