@@ -5,7 +5,13 @@ from datetime import date
 from decimal import Decimal
 
 from src.core.models.transaction import IOFlow, Transaction, TransactionOperationType
-from src.core.services.cash_flow import MonthlyCashFlow, calculate_monthly_cash_flow, next_month
+from src.core.services.cash_flow import (
+    DailyCashFlow,
+    MonthlyCashFlow,
+    calculate_daily_cash_flow,
+    calculate_monthly_cash_flow,
+    next_month,
+)
 
 
 def transaction(
@@ -31,6 +37,24 @@ def transaction(
 
 
 class CashFlowTests(unittest.TestCase):
+    def test_daily_cash_flow_aggregates_io_on_each_date(self) -> None:
+        transactions = [
+            transaction(date(2024, 1, 2), io_flow=IOFlow.INFLOW, operation_value="100"),
+            transaction(date(2024, 1, 2), io_flow=IOFlow.OUTFLOW, operation_value="25"),
+            transaction(date(2024, 1, 3), io_flow=IOFlow.INFLOW, operation_value=None),
+        ]
+
+        result = calculate_daily_cash_flow(transactions)
+
+        self.assertEqual(result, [
+            DailyCashFlow(
+                date(2024, 1, 2), Decimal("100"), Decimal("25"), Decimal("75"), 2
+            ),
+            DailyCashFlow(
+                date(2024, 1, 3), Decimal("0"), Decimal("0"), Decimal("0"), 1
+            ),
+        ])
+
     def test_empty_transactions_return_no_months(self) -> None:
         self.assertEqual(calculate_monthly_cash_flow([]), [])
 
