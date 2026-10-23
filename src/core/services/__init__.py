@@ -12,6 +12,8 @@ from .performance_services import (
     MonthlyPerformanceService,
     YearlyPerformance,
     YearlyPerformanceService,
+    XirrPerformance,
+    XirrPerformanceService,
 )
 from .portfolio_reconciliation import (
     PositionConflict,
@@ -33,6 +35,8 @@ __all__ = [
     "MonthlyPerformanceService",
     "YearlyPerformance",
     "YearlyPerformanceService",
+    "XirrPerformance",
+    "XirrPerformanceService",
     "PositionConflict",
     "PortfolioReconciliationService",
     "PortfolioReconciliationStatus",
